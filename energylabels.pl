@@ -63,6 +63,7 @@ File =|postcode_66.xml|=, line 432.811.
   2. Put properties into separate RDF files.
 
 @author Wouter Beek
+@see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
 @version 2013/04, 2013/06
 */
 
@@ -424,18 +425,17 @@ collect_rdf(FromDir, ToDir):-
   % Load all turtle files.
   directory_file_path(FromDir, 'file_*', RE),
   expand_file_name(RE, TurtleFiles),
-  findall(
-    Graph,
+  forall(
+    member(TurtleFile, TurtleFiles),
     (
-      member(TurtleFile, TurtleFiles),
       file_name(TurtleFile, _Dir, Graph, _Ext),
-      rdf_load2(TurtleFile, [format(turtle), graph(Graph)])
-    ),
-    Graphs
+      rdf_load2(TurtleFile, [format(turtle), graph(Graph)]),
+      forall(rdf(S, P, O, Graph), rdf_assert(S, P, O, big))
+    )
   ),
-
   % Merge all RDF graphs.
-  rdf_graph_merge(Graphs, big),
+  % TOO SLOW?
+  %rdf_graph_merge(Graphs, big),
 
   % Store the merged RDF graph in a single Turtle file.
   absolute_file_name(
