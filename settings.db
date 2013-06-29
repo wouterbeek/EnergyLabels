@@ -1,9 +1,0 @@
-% This file must be readable.
-:- setting(input_file_name, v20130401, atom, 'The original input file.').
-
-% This directory must be readable.
-:- setting(input_files_directory, 'Input', atom, 'The subdirectory for input files.').
-
-% This directory must be writeable.
-:- setting(output_files_directory, 'Output', atom, 'The subdirectory for output files.').
-
