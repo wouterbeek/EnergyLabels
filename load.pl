@@ -9,8 +9,6 @@ load_energylabels:-
   assert(user:file_search_path(project, ThisDirectory)),
   assert(user:file_search_path(energylabels, ThisDirectory)),
   
-  assert(user:file_search_path(data, energylabels('Data'))),
-  
   % Load the PGC.
   assert(user:file_search_path(pgc, energylabels('PGC'))),
   (
