@@ -68,6 +68,7 @@ File =|postcode_66.xml|=, line 432.811.
 */
 
 :- use_module(dcg(dcg_ascii)).
+:- use_module(dcg(dcg_date)).
 :- use_module(dcg(dcg_generic)).
 :- use_module(generics(atom_ext)).
 :- use_module(generics(codes_ext)).
@@ -189,6 +190,7 @@ to_big_file(FromDir, ToDir):-
 
   % Now create the big file which now has newlines.
   create_file(ToDir, big, xml, ToFile),
+gtrace,
   merge_into_one_file(RE2, ToFile).
 
 
@@ -202,152 +204,34 @@ xml_to_poscode(FromDir, ToDir):-
     FromFile,
     [access(read), file_type(xml), relative_to(FromDir)]
   ),
-  % Create an XML file for each first two postcode characters.
-  setup_call_cleanup(
-    open(FromFile, read, FromStream),
-    create_postcode(FromStream, ToDir),
-    close(FromStream)
-  ),
-
-  % Add the closing root tag to the postcode XML documents.
-  directory_file_path(ToDir, 'postcode_*.xml', RE),
-  expand_file_name(RE, ToFiles),
-  forall(
-    member(ToFile, ToFiles),
-    setup_call_cleanup(
-      open(ToFile, append, ToStream, []),
-      format(ToStream, '</Pandcertificaten>\n', []),
-      (
-        flush_output(ToStream),
-        close(ToStream)
-      )
-    )
-  ).
-
-create_postcode(MainStream, _ToDir):-
-  at_end_of_stream(MainStream), !.
-create_postcode(MainStream, ToDir):-
-  read_entry(MainStream, Entry), !,
-  (
-    flag(entries, 10000, 0)
-  ->
-    flag(entries_files, X, X + 1)
-  ;
-    flag(entries, Y, Y + 1)
-  ),
-  flag(entries_files, FileId, FileId),
-  format(atom(FileName), 'file_~w', [FileId]),
-  absolute_file_name(
-    FileName,
-    File,
-    [access(write), file_type(xml), relative_to(ToDir)]
-  ),
-  setup_call_cleanup(
-    open(File, append, Stream),
-    (
-      if_then(exists_file(File), format(Stream, '<Pandcertificaten>\n', [])),
-      % Add the data entity.
-      format(Stream, '~w', [Entry])
-    ),
-    (
-      flush_output(Stream),
-      close(Stream)
-    )
-  ),
-  create_postcode(MainStream, ToDir).
-
-read_entry(Stream, Entry):-
-  read_entry(Stream, out, Entry).
-
-read_entry(Stream, out, Entry):-
-  peek_atom(Stream, '<Pandcertificaat>'),
-  !,
-  read_line_to_codes(Stream, Codes1),
-  read_entry(Stream, in, Codes2),
-  append([Codes1, [10], Codes2, [10]], Codes3),
-  atom_codes(Entry, Codes3).
-read_entry(Stream, out, Entry):-
-  read_line_to_codes(Stream, Codes),
-  atom_codes(Atom, Codes),
-  debug(energylabels, 'Skipping: ~w', [Atom]),
-  read_entry(Stream, out, Entry).
-read_entry(Stream, in, Codes):-
-  peek_atom(Stream, '</Pandcertificaat>'),
-  !,
-  read_line_to_codes(Stream, Codes).
-read_entry(Stream, in, Codes3):-
-  read_line_to_codes(Stream, Codes1),
-  read_entry(Stream, in, Codes2),
-  append([Codes1, [10], Codes2], Codes3).
-
-
-
-% Stage 5 -> Stage 6 (Load XML files into RDF).
-postcode_xml_to_rdf_multiple_files(FromDir, ToDir):-
-  % Add the closing root tag to the postcode XML documents.
-  directory_file_path(FromDir, 'file_*.xml', RE),
-  expand_file_name(RE, XML_Files),
   setting(energylabels_graph, Graph),
-  forall(
-    member(XML_File, XML_Files),
-    setup_call_cleanup(
-      file_to_xml(XML_File, DOM),
-      postcode_dom_to_rdf(Graph, DOM),
-      (
-        file_name(XML_File, _FromDir, Name, _Ext),
-        absolute_file_name(
-          Name,
-          Turtle_File,
-          [access(write), file_type(turtle), relative_to(ToDir)]
-        ),
-        rdf_save2(Turtle_File, [format(turtle), graph(Graph)]),
-        rdf_unload_graph(Graph)
-      )
-    )
-  ).
-postcode_xml_to_rdf_one_file(FromDir, ToDir):-
+  xml_stream(FromFile, 'Pandcertificaat', process_postcode(Graph)),
   absolute_file_name(
-    big,
-    XML_File,
-    [access(read), file_type(xml), relative_to(FromDir)]
-  ),
-  file_to_xml(XML_File, DOM),
-  setting(energylabels_graph, Graph),
-  postcode_dom_to_rdf(Graph, DOM),
-  absolute_file_name(
-    big,
+    postcodes,
     Turtle_File,
     [access(write), file_type(turtle), relative_to(ToDir)]
   ),
-  rdf_save2(Turtle_File, [format(turtle), graph(Graph)]),
-  rdf_unload_graph(Graph).
-
-postcode_dom_to_rdf(Graph, DOM):-
-  forall(
-    xpath(DOM, //'Pandcertificaat', Entry),
-    entry_to_rdf(Graph, Entry)
-  ).
+  rdf_save2(Turtle_File, [format(turtle), graph(Graph)]).
 
 % The graph is also used as the XML namespace.
-entry_to_rdf(Graph, Entry):-
-  create_house(Graph, Entry, House),
-  assert_energyclass(Graph, Entry, House),
-  assert_validity(Graph, Entry, House),
-  assert_joules(Graph, Entry, House),
-  assert_energy_prestationindex(Graph, Entry, House).
-entry_to_rdf(_Graph, Entry):-
-  gtrace, %DEB
-  write(Entry).
+process_postcode(Graph, DOM):-
+  create_house(Graph, DOM, House),
+  assert_energyclass(Graph, DOM, House),
+  assert_validity(Graph, DOM, House),
+  assert_joules(Graph, DOM, House),
+  assert_energy_prestationindex(Graph, DOM, House).
+process_postcode(_Graph, DOM):-
+  cowsay(DOM).
 
-create_house(Graph, Entry, House):-
+create_house(Graph, DOM, House):-
   Spec1 =.. ['PandVanMeting_postcode', content],
-  xpath_chk(Entry, //Spec1, [PostCode]),
+  xpath_chk(DOM, //Spec1, [PostCode]),
 
   Spec2 =.. ['PandVanMeting_huisnummer', content],
-  xpath_chk(Entry, //Spec2, [HouseNumber]),
+  xpath_chk(DOM, //Spec2, [HouseNumber]),
 
   Spec3 =.. ['PandVanMeting_huisnummer_toev', content],
-  xpath_chk(Entry, //Spec3, HouseNumberAddition),
+  xpath_chk(DOM, //Spec3, HouseNumberAddition),
 
   % A housenumber need not have an addition.
   (
@@ -381,97 +265,34 @@ create_house(Graph, Entry, House):-
     )
   ).
 
-assert_energyclass(Graph, Entry, House):-
+assert_energyclass(Graph, DOM, House):-
   Spec =.. ['PandVanMeting_energieklasse', content],
-  xpath_chk(Entry, //Spec, [EnergyClassName]),
+  xpath_chk(DOM, //Spec, [EnergyClassName]),
   rdf_global_id(Graph:EnergyClassName, EnergyClass),
   rdf_global_id(Graph:energyclass, Predicate),
   rdf_assert(House, Predicate, EnergyClass, Graph).
 
-assert_validity(Graph, Entry, House):-
+assert_validity(Graph, DOM, House):-
   Spec =.. ['Meting_geldig_tot', content],
-  xpath_chk(Entry, //Spec, [ValidDate1]),
+  xpath_chk(DOM, //Spec, [Atom]),
   rdf_global_id(Graph:validUntil, Predicate),
-  convert_date(ValidDate1, ValidDate2),
-  rdf_assert_datatype(House, Predicate, date, ValidDate2, Graph).
+  atom_codes(Atom, Codes),
+  phrase(_Lang, DateTime, Codes),
+  rdf_assert_datatype(House, Predicate, date, DateTime, Graph).
 
-convert_date(Date, date(Y,M,D)):-
-  atom_codes(Date, Codes1),
-  append([C1,C2,Y1,Y2], Codes2, Codes1),
-  append([M1,M2], [D1,D2], Codes2),
-  number_codes(Y, [C1,C2,Y1,Y2]),
-  number_codes(M, [M1,M2]),
-  number_codes(D, [D1,D2]).
-
-assert_joules(Graph, Entry, House):-
+assert_joules(Graph, DOM, House):-
   Spec =.. ['PandVanMeting_energieverbruikmj', content],
-  xpath_chk(Entry, //Spec, [Energy1]),
+  xpath_chk(DOM, //Spec, [Energy1]),
   rdf_global_id(Graph:energySpending, Predicate),
   atom_number(Energy1, Energy2),
   rdf_assert_datatype(House, Predicate, float, Energy2, Graph).
 
-assert_energy_prestationindex(Graph, Entry, House):-
+assert_energy_prestationindex(Graph, DOM, House):-
   Spec =.. ['PandVanMeting_energieprestatieindex', content],
-  xpath_chk(Entry, //Spec, [PrestationIndex1]),
+  xpath_chk(DOM, //Spec, [PrestationIndex1]),
   rdf_global_id(Graph:prestatieindex, Predicate),
   atom_number(PrestationIndex1, PrestationIndex2),
   rdf_assert_datatype(House, Predicate, float, PrestationIndex2, Graph).
-
-
-
-% Stage 6 -> Stage 7 (Load all postcode RDF files and merge them into
-% one big RDF file).
-collect_rdf(FromDir, ToDir):-
-  % Load all turtle files.
-  directory_file_path(FromDir, 'file_*', RE),
-  expand_file_name(RE, TurtleFiles),
-  forall(
-    member(TurtleFile, TurtleFiles),
-    (
-      file_name(TurtleFile, _Dir, Graph, _Ext),
-      rdf_load2(TurtleFile, [format(turtle), graph(Graph)]),
-      forall(rdf(S, P, O, Graph), rdf_assert(S, P, O, big))
-    )
-  ),
-  % Merge all RDF graphs.
-  % TOO SLOW?
-  %rdf_graph_merge(Graphs, big),
-
-  % Store the merged RDF graph in a single Turtle file.
-  absolute_file_name(
-    postcodes,
-    ToFile,
-    [access(write), file_type(turtle), relative_to(ToDir)]
-  ),
-  rdf_save2(ToFile, [format(turtle), graph(big)]).
-
-
-
-load_rdf:-
-  absolute_file_name(
-    project('EnergyLabels'),
-    File,
-    [access(read), file_type(turtle)]
-  ),
-  rdf_load2(File, [format(turtle), graph(hk)]).
-
-store_dom([element('Pandcertificaat', [], DOM)]):-
-  memberchk(element('PandVanMeting_postcode', [], [PostCode1]), DOM),
-  atom_codes(PostCode1, PostCode2),
-  append([One, Two], _, PostCode2),
-  number_codes(Index, [One, Two]),
-  (
-    bag(Index)
-  ->
-    true
-  ;
-    assert(bag(Index))
-  ),
-  flag(Index, ID, ID + 1),
-  forall(
-    member(element(Property, [], _Value), DOM),
-    assert(property(Property))
-  ).
 
 init:-
   setting(energylabels_graph, Graph),
@@ -492,7 +313,7 @@ init:-
 energylabels_script:-
   set_prolog_stack(global, limit(2*10**9)),
   init,
-  stage0, stage1, stage2, stage3, stage4, stage5.
+  stage0, stage1, stage2, stage3.
 stage0:-
   profile(script_stage(0, copy_input_unarchived)).
 stage1:-
@@ -502,15 +323,4 @@ stage2:-
   profile(script_stage(2, to_big_file)).
 stage3:-
   profile(script_stage(3, xml_to_poscode)).
-stage4:-
-  script_stage(4, postcode_xml_to_rdf_multiple_files).
-  % The one_file variant does not need the xml_to_postcode goal.
-  %script_stage(4, postcode_xml_to_rdf_one_file),
-stage5:-
-  script_stage(5, collect_rdf).
-
-semantic_script:-
-  init,
-  set_prolog_stack(global, limit(2*10**9)),
-  stage4, stage5.
 
