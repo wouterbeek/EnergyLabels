@@ -1,8 +1,7 @@
 :- module(
   energylabels,
   [
-    energylabels_script/0,
-    semantic_script/0
+    energylabels_script/0
   ]
 ).
 
@@ -57,13 +56,10 @@ File =|postcode_66.xml|=, line 432.811.
 <Pandcertificaat>
 ~~~
 
-# TODO
-
-  1. Put parses into PostCode files (grouped by the first two digits).
-  2. Put properties into separate RDF files.
-
 @author Wouter Beek
 @see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
+@tbd process_create does not form for `cat FROM > TO`.
+@tbd Big memory profile for stage 2 or 3.
 @version 2013/04, 2013/06
 */
 
@@ -91,6 +87,8 @@ File =|postcode_66.xml|=, line 432.811.
 :- use_module(rdf(rdf_serial)).
 :- use_module(xml(xml)).
 :- use_module(xml(xml_namespace)).
+:- use_module(xml(xml_stream)).
+:- use_module(xml(xml_to_rdf)).
 
 :- dynamic(bag/1).
 
@@ -157,25 +155,38 @@ to_small_files(FromDir, ToDir):-
 
 
 % Stage 2 -> Stage 3 (Insert newlines in small files).
-insert_newlines(Dir, _):-
+insert_newlines(FromDir, ToDir):-
   % Add newlines to the small files.
   setting(temporary_file_prefix, Prefix),
   atomic_concat(Prefix, '*', RE0),
-  directory_file_path(Dir, RE0, RE),
-  expand_file_name(RE, FileNames),
+  directory_file_path(FromDir, RE0, RE),
+  expand_file_name(RE, FromFiles),
+  run_on_sublists(FromFiles, insert_newlines_worker(ToDir)).
+
+% This predicate can only run in threads.
+% See module THREAD_EXT.
+insert_newlines_worker(ToDir, FromFiles):-
+  thread_self(ThreadAlias),
   forall(
-    member(FileName, FileNames),
+    member(FromFile, FromFiles),
     setup_call_cleanup(
-      open(FileName, read, Stream),
+      open(FromFile, read, Stream),
       (
-        file_name_type(FileName, text, File),
+	directory_file_path(_FromDir, FileName, FromFile),
+        absolute_file_name(
+	  FileName,
+	  ToFile,
+	  [access(write), file_type(text), relative_to(ToDir)]
+	),
         read_stream_to_codes(Stream, Codes),
         codes_replace2(Codes, [62,60], [62,10,60], NewCodes),
-        %dcg_phrase(dcg_replace("><", (">", line_feed, "<")), Codes, NewCodes),
         atom_codes(NewAtom, NewCodes),
-        atom_to_file(NewAtom, File)
+        atom_to_file(NewAtom, ToFile)
       ),
-      close(Stream)
+      (
+        close(Stream),
+        thread_success(ThreadAlias)
+      )
     )
   ).
 
@@ -184,19 +195,19 @@ insert_newlines(Dir, _):-
 % Stage 3 -> Stage 4 (Put small files together into big one).
 to_big_file(FromDir, ToDir):-
   setting(temporary_file_prefix, Prefix),
-  atomic_concat(Prefix, '*', RE0),
-  file_name_type(RE0, text, RE1),
+  atomic_concat(Prefix, '*', RE1),
   directory_file_path(FromDir, RE1, RE2),
 
   % Now create the big file which now has newlines.
+  create_file(FromDir, big, xml, TempFile),
+  merge_into_one_file(RE2, TempFile),
   create_file(ToDir, big, xml, ToFile),
-gtrace,
-  merge_into_one_file(RE2, ToFile).
+  safe_move_file(TempFile, ToFile).
 
 
 
-% Stage 4 -> Stage 5 (Split the big XML file into small ones per the first
-% two characters of a postcode.)
+% Stage 4 -> Stage 5 (Convert the big XML file to an RDF file.
+% Use XML streaming for this.)
 xml_to_poscode(FromDir, ToDir):-
   % Open the input file on a read stream.
   absolute_file_name(
@@ -214,14 +225,20 @@ xml_to_poscode(FromDir, ToDir):-
   rdf_save2(Turtle_File, [format(turtle), graph(Graph)]).
 
 % The graph is also used as the XML namespace.
-process_postcode(Graph, DOM):-
-  create_house(Graph, DOM, House),
+process_postcode(Graph, DOM1):-
+  create_house(Graph, DOM1, House),
+  Spec =.. ['Pandcertificaat', content],
+  xpath(DOM1, //Spec, DOM2),
+  attribute_value_pairs(Graph, Graph, House, DOM2).
+
+/*
   assert_energyclass(Graph, DOM, House),
   assert_validity(Graph, DOM, House),
   assert_joules(Graph, DOM, House),
   assert_energy_prestationindex(Graph, DOM, House).
 process_postcode(_Graph, DOM):-
   cowsay(DOM).
+*/
 
 create_house(Graph, DOM, House):-
   Spec1 =.. ['PandVanMeting_postcode', content],
@@ -265,6 +282,7 @@ create_house(Graph, DOM, House):-
     )
   ).
 
+/*
 assert_energyclass(Graph, DOM, House):-
   Spec =.. ['PandVanMeting_energieklasse', content],
   xpath_chk(DOM, //Spec, [EnergyClassName]),
@@ -277,7 +295,7 @@ assert_validity(Graph, DOM, House):-
   xpath_chk(DOM, //Spec, [Atom]),
   rdf_global_id(Graph:validUntil, Predicate),
   atom_codes(Atom, Codes),
-  phrase(_Lang, DateTime, Codes),
+  phrase(date(_Lang, DateTime), Codes),
   rdf_assert_datatype(House, Predicate, date, DateTime, Graph).
 
 assert_joules(Graph, DOM, House):-
@@ -293,16 +311,14 @@ assert_energy_prestationindex(Graph, DOM, House):-
   rdf_global_id(Graph:prestatieindex, Predicate),
   atom_number(PrestationIndex1, PrestationIndex2),
   rdf_assert_datatype(House, Predicate, float, PrestationIndex2, Graph).
+*/
 
 init:-
   setting(energylabels_graph, Graph),
-  xml_register_namespace(Graph, 'http://www.example.com/'),
-  %absolute_file_name(
-  %  energylabels(settings),
-  %  File,
-  %  [access(read), file_type(settings)]
-  %),
-  %load_settings(File),
+  xml_register_namespace(
+    Graph,
+    'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl#'
+  ),
   create_personal_subdirectory('Data', Data),
   db_add_novel(user:file_search_path(data, Data)),
   create_personal_subdirectory('Data'('Input'), Input),
@@ -313,14 +329,20 @@ init:-
 energylabels_script:-
   set_prolog_stack(global, limit(2*10**9)),
   init,
-  stage0, stage1, stage2, stage3.
+  stage0, stage1, stage2, stage3, stage4.
 stage0:-
-  profile(script_stage(0, copy_input_unarchived)).
+  init,
+  script_stage(0, copy_input_unarchived).
 stage1:-
-  profile(script_stage(1, to_small_files)).
+  init,
+  script_stage(1, to_small_files).
 stage2:-
-  profile(script_stage(2, insert_newlines)), % Stay in the same dir.
-  profile(script_stage(2, to_big_file)).
+  init,
+  script_stage(2, insert_newlines).
 stage3:-
-  profile(script_stage(3, xml_to_poscode)).
+  init,
+  script_stage(3, to_big_file).
+stage4:-
+  init,
+  script_stage(4, xml_to_poscode).
 
