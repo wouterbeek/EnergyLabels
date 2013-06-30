@@ -69,6 +69,7 @@ File =|postcode_66.xml|=, line 432.811.
 :- use_module(generics(atom_ext)).
 :- use_module(generics(codes_ext)).
 :- use_module(generics(db_ext)).
+:- use_module(generics(list_ext)).
 :- use_module(generics(meta_ext)).
 :- use_module(generics(script_stage)).
 :- use_module(library(archive)).
@@ -172,14 +173,21 @@ insert_newlines_worker(ToDir, FromFiles):-
     setup_call_cleanup(
       open(FromFile, read, Stream),
       (
-	directory_file_path(_FromDir, FileName, FromFile),
+        directory_file_path(_FromDir, FileName, FromFile),
         absolute_file_name(
-	  FileName,
-	  ToFile,
-	  [access(write), file_type(text), relative_to(ToDir)]
-	),
+          FileName,
+          ToFile,
+          [access(write), file_type(text), relative_to(ToDir)]
+        ),
         read_stream_to_codes(Stream, Codes),
-        codes_replace2(Codes, [62,60], [62,10,60], NewCodes),
+        codes_replace2(Codes, [62,60], [62,10,60], NewCodes_),
+        % It will sometimes happen that the cuttoff lies exactly
+        % in between =|>|= and =|<|=.
+        if_then_else(
+          first(NewCodes_, 60),
+          NewCodes = [10 | NewCodes_],
+          NewCodes = NewCodes_
+        ),
         atom_codes(NewAtom, NewCodes),
         atom_to_file(NewAtom, ToFile)
       ),
@@ -216,7 +224,12 @@ xml_to_poscode(FromDir, ToDir):-
     [access(read), file_type(xml), relative_to(FromDir)]
   ),
   setting(energylabels_graph, Graph),
-  xml_stream(FromFile, 'Pandcertificaat', process_postcode(Graph)),
+  xml_stream(
+    FromFile,
+    'Pandcertificaat',
+    process_postcode(Graph),
+    store_postcodes(Graph, ToDir)
+  ),
   absolute_file_name(
     postcodes,
     Turtle_File,
@@ -230,6 +243,17 @@ process_postcode(Graph, DOM1):-
   Spec =.. ['Pandcertificaat', content],
   xpath(DOM1, //Spec, DOM2),
   attribute_value_pairs(Graph, Graph, House, DOM2).
+
+store_postcodes(Graph, Dir):-
+  flag(number_of_files, X, X + 1),
+  format(atom(FileName), 'postcodes_~w', [X]),
+  absolute_file_name(
+    FileName,
+    File,
+    [access(write), file_type(turtle), relative_to(Dir)]
+  ),
+  rdf_save2(File, [format(turtle), graph(Graph)]),
+  rdf_unload_graph(Graph).
 
 /*
   assert_energyclass(Graph, DOM, House),
@@ -282,36 +306,91 @@ create_house(Graph, DOM, House):-
     )
   ).
 
-/*
-assert_energyclass(Graph, DOM, House):-
-  Spec =.. ['PandVanMeting_energieklasse', content],
-  xpath_chk(DOM, //Spec, [EnergyClassName]),
-  rdf_global_id(Graph:EnergyClassName, EnergyClass),
-  rdf_global_id(Graph:energyclass, Predicate),
-  rdf_assert(House, Predicate, EnergyClass, Graph).
 
-assert_validity(Graph, DOM, House):-
-  Spec =.. ['Meting_geldig_tot', content],
-  xpath_chk(DOM, //Spec, [Atom]),
-  rdf_global_id(Graph:validUntil, Predicate),
-  atom_codes(Atom, Codes),
-  phrase(date(_Lang, DateTime), Codes),
-  rdf_assert_datatype(House, Predicate, date, DateTime, Graph).
 
-assert_joules(Graph, DOM, House):-
-  Spec =.. ['PandVanMeting_energieverbruikmj', content],
-  xpath_chk(DOM, //Spec, [Energy1]),
-  rdf_global_id(Graph:energySpending, Predicate),
-  atom_number(Energy1, Energy2),
-  rdf_assert_datatype(House, Predicate, float, Energy2, Graph).
-
-assert_energy_prestationindex(Graph, DOM, House):-
-  Spec =.. ['PandVanMeting_energieprestatieindex', content],
-  xpath_chk(DOM, //Spec, [PrestationIndex1]),
-  rdf_global_id(Graph:prestatieindex, Predicate),
-  atom_number(PrestationIndex1, PrestationIndex2),
-  rdf_assert_datatype(House, Predicate, float, PrestationIndex2, Graph).
-*/
+postcode_cleaning(Graph):-
+  forall(
+    (
+      rdf_literal(House, el:postcode, Postcode, Graph),
+      rdf_datatype(House, el:house_number, Number, Graph)
+    ),
+    (
+      rdfs_assert_individual(House, el:'House', Graph),
+      rdf_retractall_literal(House, el:'PandVanMeting_postcode', _, Graph),
+      rdf_retractall_literal(House, el:'PandVanMeting_huisnummer', _, Graph),
+      rdf_retractall_literal(House, el:'PandVanMeting_huisnummer_toev', _, Graph),
+      rdf_retractall_literal(House, el:'Pand_postcode', _, Graph),
+      rdf_retractall_literal(House, el:'Pand_huisnummer', _, Graph),
+      rdf_retractall_literal(House, el:'Pand_huisnummer_toev', _, Graph)
+    )
+  ),
+  forall(
+    rdf_retractall_literal(House, el:'Pand_cert_type', CertificationType, Graph),
+    rdf_assert(House, el:certification_type, el:CertificationType, Graph)
+  ),
+  forall(
+    rdf_retractall_literal(House, el:'Pand_plaats', Place1, Graph),
+    (
+      to_lower(Place1, Place2),
+      rdf_assert(House, el:place, el:Place2, Graph)
+    )
+  ),
+  forall(
+    rdf_retractall_literal(House, el:'Pand_registratiedatum', RegistrationDate1, Graph),
+    (
+      dcg_phrase(date(_Lang, RegistrationDate2), RegistrationDate1),
+      rdf_assert_datatype(House, el:registration_date, date, RegistrationDate2, Graph)
+    )
+  ),
+  
+  % Measurement
+  forall(
+    rdf_retractall(House, el:'Meting_geldig_tot', ValidDate1, Graph),
+    (
+      rdf_bnode(Measurement),
+      rdf_assert(House, el:measurement, Measurement, Graph),
+      dcg_phrase(date(_Lang, ValidDate2), ValidDate1),
+      rdf_assert_datatype(Measurement, el:valid_until, date, ValidDate2, Graph)
+      forall(
+        rdf_retractall_literal(House, el:'PandVanMeting_energieklasse', EnergyClass, Graph),
+        rdf_assert(Measurement, el:energyclass, el:EnergyClass)
+      ),
+      forall(
+        (
+          rdf_retractall_literal(House, el:'PandVanMeting_energieverbruikmj', Amount1, Graph),
+          rdf_retractall_literal(House, el:'PandVanMeting_energieverbruiktype', Type, Graph)
+        ),
+        (
+          rdf_bnode(Consumption),
+          rdf_assert(Measurement, el:consumption, Consumption, Graph),
+          rdf_assert(Consumption, el:type, el:Type, Graph),
+          atom_number(Amount1, Amount2),
+          rdf_assert_datatype(Consumption, el:energy_consumption, float, Amount2, Graph)
+        )
+      ),
+      forall(
+        rdf_retractall_literal(House, el:'PandVanMeting_opnamedatum', MeasurementDate1, Graph),
+        (
+          dcg_phrase(date(_Lang, MeasurementDate2), MeasurementDate1),
+          rdf_assert_datatype(Measurement, el:measurement_date, MeasurementDate2, Graph)
+        )
+      ),
+      forall(
+        rdf_retractall_literal(House, el:'PandVanMeting_energieprestatieindex', Index1, Graph),
+        (
+          atom_number(Index1, Index2),
+          rdf_assert_datatype(Measurement, el:prestation_index, float, Index2, Graph)
+        )
+      ),
+      forall(
+        retractall(House, el:'Afmeldnummer', Afmeldnummer1, Graph),
+        (
+          atom_number(Afmeldnummer1, Afmeldnummer2),
+          rdf_assert_datatype(Measurement, el:afmeldnummer, Afmeldnummer2, Graph)
+        )
+      )
+    )
+  ).
 
 init:-
   setting(energylabels_graph, Graph),
