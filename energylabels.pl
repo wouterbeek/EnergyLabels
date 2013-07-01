@@ -256,11 +256,146 @@ xml_to_poscode(FromDir, ToDir):-
   rdf_save2(RDF_File, [format(rdf_xml), graph(Graph)]).
 
 % The graph is also used as the XML namespace.
-process_postcode(Graph, DOM1):-
-  create_house(Graph, DOM1, House),
+process_postcode(Graph, DOM0):-
   Spec =.. ['Pandcertificaat', content],
-  xpath(DOM1, //Spec, DOM2),
-  assert_entry(Graph, House, DOM2).
+  xpath_chk(DOM0, //Spec, DOM1),
+
+  % CERTIFICATE
+  flag(certificate, CId, CId + 1),
+  format(atom(CName), 'c_~w', [CId]),
+  rdf_global_id(el:CName, Certificate),
+  rdfs_assert_individual(Certificate, el:'EP_Certificate', Graph),
+
+  % Required postal code.
+  selectchk(element('PandVanMeting_postcode', _, [Postcode]), DOM1, DOM2),
+  rdf_assert_literal(Certificate, el:postcode, Postcode, Graph),
+
+  % Required house number.
+  selectchk(element('PandVanMeting_huisnummer', _, [HouseNumber1]), DOM2, DOM3),
+  atom_number(HouseNumber1, HouseNumber2),
+  rdf_assert_datatype(Certificate, el:housenumber, int, HouseNumber2, Graph),
+
+  % Optional addition to house number.
+  selectchk(element('PandVanMeting_huisnummer_toev', _, Addition1), DOM3, DOM5),
+  if_then(
+    Addition1 = [Addition2],
+    rdf_assert_literal(Certificate, el:housenumber_addition, Addition2, Graph)
+  ),
+
+  % Certificate's house building code
+  selectchk(element('PandVanMeting_gebouwcode', _, BuildingCode1), DOM5, DOM6),
+  (
+    BuildingCode1 = [BuildingCode2]
+  ->
+    atom_number(BuildingCode2, BuildingCode3),
+    rdf_assert_datatype(Certificate, el:building_code, int, BuildingCode3, Graph)
+  ;
+    BuildingCode1 = []
+  ),
+
+  % Certificate's inclusion date
+  selectchk(element('PandVanMeting_opnamedatum', _, [SurveyDate1]), DOM6, DOM7),
+  dcg_phrase(date(_, SurveyDate2), SurveyDate1),
+  rdf_assert_datatype(Certificate, el:survey_date, date, SurveyDate2, Graph),
+
+  % Certificate's measurement valid until.
+  selectchk(element('Meting_geldig_tot', _, [ValidityDate1]), DOM7, DOM8),
+  dcg_phrase(date(_, ValidityDate2), ValidityDate1),
+  rdf_assert_datatype(Certificate, el:measurement_valid_until, date, ValidityDate2, Graph),
+
+  % Certificate's number?
+
+  % Certificate's calculation type?
+
+  % Certificate's energy prestation index
+  selectchk(element('PandVanMeting_energieprestatieindex', _, [Index1]), DOM8, DOM11),
+  atom_number(Index1, Index2),
+  rdf_assert_datatype(Certificate, el:prestation_index, float, Index2, Graph),
+
+  % Energy class
+  selectchk(element('PandVanMeting_energieklasse', _, [EnergyClass1]), DOM11, DOM12),
+  rdf_global_id(el:EnergyClass1, EnergyClass2),
+  rdf_assert(Certificate, el:energyclass, EnergyClass2, Graph),
+
+  % Certificate's energy consumption
+  rdf_bnode(Consumption),
+  rdf_assert(Certificate, el:energy_consumption, Consumption, Graph),
+  selectchk(element('PandVanMeting_energieverbruikmj', _, [Amount1]), DOM12, DOM13),
+  atom_number(Amount1, Amount2),
+  rdf_assert_datatype(Consumption, el:amount, float, Amount2, Graph),
+
+  % Measurement amount
+  selectchk(element('PandVanMeting_energieverbruiktype', _, [Type1]), DOM13, DOM14),
+  rdf_global_id(el:Type1, Type2),
+  rdf_assert(Consumption, el:type, Type2, Graph),
+
+  DOM20 = DOM14,
+
+  % BUILDING
+  flag(building, BId, BId + 1),
+  format(atom(BName), 'b_~w', [BId]),
+  rdf_global_id(el:BName, Building),
+
+  % Building's postal code
+  selectchk(element('Pand_postcode', _, [Postcode10]), DOM20, DOM21),
+  rdf_assert_literal(Building, el:postcode, Postcode10, Graph),
+
+  % Building's house number
+  selectchk(element('Pand_huisnummer', _, [HouseNumber11]), DOM21, DOM22),
+  atom_number(HouseNumber11, HouseNumber12),
+  rdf_assert_datatype(Building, el:house_number, int, HouseNumber12, Graph),
+
+  % Building's house number addition
+  selectchk(element('Pand_huisnummer_toev', _, HouseNumberAddition10), DOM22, DOM23),
+  rdf_assert_literal(Building, el:house_number_addition, HouseNumberAddition10, Graph),
+
+  % Building's place
+  selectchk(element('Pand_plaats', _, [Place1]), DOM23, DOM24),
+  downcase_atom(Place1, Place2),
+  rdf_global_id(el:Place2, Place3),
+  rdf_assert_literal(Building, el:place, Place3, Graph),
+
+  % Building's certification type. Either 'house' or 'utility'.
+  % @tbd Use switch for this.
+  % @tbd What is this property's domain?
+  selectchk(element('Pand_cert_type', _, [CertificationType1]), DOM24, DOM25),
+  (
+    CertificationType1 == 'W'
+  ->
+    rdf_global_id(el:house, CertificationType2)
+  ;
+    CertificationType1 == 'U'
+  ->
+    rdf_global_id(el:utility, CertificationType2)
+  ),
+  rdf_assert(Building, el:certification_type, CertificationType2, Graph),
+
+  % Building's registration date
+  selectchk(element('Pand_registratiedatum', _, [RegistrationDate1]), DOM25, DOM26),
+  dcg_phrase(date(_, RegistrationDate2), RegistrationDate1),
+  rdf_assert_datatype(Building, el:registration_date, date, RegistrationDate2, Graph),
+
+
+  % Undocumented 'Pand_gebouwcode'
+  selectchk(element('Pand_gebouwcode', _, BuildingCode1), DOM26, DOM27),
+  (
+    BuildingCode1 = [BuildingCode2]
+  ->
+    rdf_assert_literal(Building, el:building_code, BuildingCode2, Graph)
+  ;
+    BuildingCode1 = []
+  ),
+
+  % Undocumented 'Afmeldnummer'
+  selectchk(element('Afmeldnummer', _, [Afmeldnummer1]), DOM27, DOM30),
+  atom_number(Afmeldnummer1, Afmeldnummer2),
+  rdf_assert_datatype(Building, el:afmeldnummer, int, Afmeldnummer2, Graph),
+
+  DOM30 == [], !.
+assert_entry(Graph, House, DOM):-
+  cowsay(DOM),
+  gtrace, %WB
+  assert_entry(Graph, House, DOM).
 
 store_postcodes(Graph, Dir):-
   flag(number_of_files, X, X + 1),
@@ -272,130 +407,6 @@ store_postcodes(Graph, Dir):-
   ),
   rdf_save2(File, [format(rdf_xml), graph(Graph)]),
   rdf_unload_graph(Graph).
-
-create_house(Graph, DOM, House):-
-  Spec1 =.. ['PandVanMeting_postcode', content],
-  xpath_chk(DOM, //Spec1, [PostCode]),
-
-  Spec2 =.. ['PandVanMeting_huisnummer', content],
-  xpath_chk(DOM, //Spec2, [HouseNumber]),
-
-  Spec3 =.. ['PandVanMeting_huisnummer_toev', content],
-  xpath_chk(DOM, //Spec3, HouseNumberAddition),
-
-  % A housenumber need not have an addition.
-  (
-    HouseNumberAddition == []
-  ->
-    FullHouseNumber = [PostCode, HouseNumber]
-  ;
-    HouseNumberAddition = [HouseNumberAddition0],
-    % Additions need to be stripped of spaces and dashes.
-    strip_atom([' ','-'], HouseNumberAddition0, HouseNumberAddition1)
-  ->
-    FullHouseNumber = [PostCode, HouseNumber, HouseNumberAddition1]
-  ),
-
-  % Create the IRI.
-  atomic_list_concat(FullHouseNumber, '_', HouseName),
-  rdf_global_id(Graph:HouseName, House),
-
-  rdf_global_id(Graph:postcode, Predicate1),
-  rdf_assert_literal(House, Predicate1, PostCode, Graph),
-
-  rdf_global_id(Graph:house_number, Predicate2),
-  atom_number(HouseNumber, HouseNumber_),
-  rdf_assert_datatype(House, Predicate2, int, HouseNumber_, Graph),
-
-  if_then(
-    nonvar(HouseNumberAddition1),
-    (
-      rdf_global_id(Graph:house_number_addition, Predicate3),
-      rdf_assert_literal(House, Predicate3, HouseNumberAddition1, Graph)
-    )
-  ).
-
-assert_entry(Graph, House, DOM1):-
-  selectchk(element('Pand_huisnummer', _, [HouseNumber]), DOM1, DOM2),
-  selectchk(element('PandVanMeting_huisnummer', _, [HouseNumber]), DOM2, DOM3),
-  selectchk(element('Pand_huisnummer_toev', _, HouseNumberAddition1), DOM3, DOM4),
-  selectchk(element('PandVanMeting_huisnummer_toev', _, HouseNumberAddition1), DOM4, DOM5),
-  xor(
-    HouseNumberAddition1 = [_HouseNumberAddition2],
-    HouseNumberAddition1 = []
-  ),
-  selectchk(element('Pand_postcode', _, [Postcode]), DOM5, DOM6),
-  selectchk(element('PandVanMeting_postcode', _, [Postcode]), DOM6, DOM71),
-  selectchk(element('Pand_gebouwcode', _, BuildingCode1), DOM71, DOM72),
-  selectchk(element('PandVanMeting_gebouwcode', _, BuildingCode1), DOM72, DOM73),
-  
-  % House building code
-  (
-    BuildingCode1 = [BuildingCode2]
-  ->
-    atom_number(BuildingCode2, BuildingCode3),
-    rdf_assert_datatype(House, el:building_code, int, BuildingCode3, Graph)
-  ;
-    BuildingCode1 = []
-  ),
-  
-  % House certification type
-  selectchk(element('Pand_cert_type', _, [CertificationType1]), DOM73, DOM8),
-  rdf_global_id(el:CertificationType1, CertificationType2),
-  rdf_assert(House, el:certification_type, CertificationType2, Graph),
-
-  % House place
-  selectchk(element('Pand_plaats', _, [Place1]), DOM8, DOM9),
-  downcase_atom(Place1, Place2),
-  rdf_global_id(el:Place2, Place3),
-  rdf_assert_literal(House, el:place, Place3, Graph),
-
-  % House registration date
-  selectchk(element('Pand_registratiedatum', _, [RegistrationDate1]), DOM9, DOM10),
-  dcg_phrase(date(_, RegistrationDate2), RegistrationDate1),
-  rdf_assert_datatype(House, el:registration_date, date, RegistrationDate2, Graph),
-
-  % House ---> Measurement
-  selectchk(element('Meting_geldig_tot', _, [ValidityDate1]), DOM10, DOM11),
-  rdf_bnode(Measurement),
-  rdf_assert(House, el:measurement, Measurement, Graph),
-  dcg_phrase(date(_, ValidityDate2), ValidityDate1),
-  rdf_assert_datatype(Measurement, el:valid_until, date, ValidityDate2, Graph),
-
-  % Energy class
-  selectchk(element('PandVanMeting_energieklasse', _, [EnergyClass1]), DOM11, DOM12),
-  rdf_global_id(el:EnergyClass1, EnergyClass2),
-  rdf_assert(Measurement, el:energyclass, EnergyClass2, Graph),
-
-  % Measurement amount
-  selectchk(element('PandVanMeting_energieverbruikmj', _, [Amount1]), DOM12, DOM13),
-  selectchk(element('PandVanMeting_energieverbruiktype', _, [Type1]), DOM13, DOM14),
-  rdf_bnode(Consumption),
-  rdf_assert(Measurement, el:consumption, Consumption, Graph),
-  rdf_global_id(el:Type1, Type2),
-  rdf_assert(Consumption, el:type, Type2, Graph),
-  atom_number(Amount1, Amount2),
-  rdf_assert_datatype(Consumption, el:energy_consumption, float, Amount2, Graph),
-
-  % Measurement date
-  selectchk(element('PandVanMeting_opnamedatum', _, [MeasurementDate1]), DOM14, DOM15),
-  dcg_phrase(date(_, MeasurementDate2), MeasurementDate1),
-  rdf_assert_datatype(Measurement, el:measurement_date, date, MeasurementDate2, Graph),
-
-  % Measurement prestation index
-  selectchk(element('PandVanMeting_energieprestatieindex', _, [Index1]), DOM15, DOM16),
-  atom_number(Index1, Index2),
-  rdf_assert_datatype(Measurement, el:prestation_index, float, Index2, Graph),
-
-  % Afmeldnummer [?]
-  selectchk(element('Afmeldnummer', _, [Afmeldnummer1]), DOM16, DOM17),
-  atom_number(Afmeldnummer1, Afmeldnummer2),
-  rdf_assert_datatype(Measurement, el:afmeldnummer, int, Afmeldnummer2, Graph),
-
-  xor(
-    DOM17 = [],
-    cowsay(DOM17)
-  ).
 
 init:-
   create_personal_subdirectory('Data', Data),
