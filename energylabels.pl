@@ -60,10 +60,9 @@ File =|postcode_66.xml|=, line 432.811.
 @see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
 @tbd process_create does not form for `cat FROM > TO`.
 @tbd Big memory profile for stage 2 or 3.
-@version 2013/04, 2013/06
+@version 2013/04, 2013/06-2013/07
 */
 
-:- use_module(dcg(dcg_ascii)).
 :- use_module(dcg(dcg_date)).
 :- use_module(dcg(dcg_generic)).
 :- use_module(generics(atom_ext)).
@@ -75,7 +74,6 @@ File =|postcode_66.xml|=, line 432.811.
 :- use_module(library(archive)).
 :- use_module(library(debug)).
 :- use_module(library(lists)).
-:- use_module(library(process)).
 :- use_module(library(readutil)).
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).
@@ -84,15 +82,17 @@ File =|postcode_66.xml|=, line 432.811.
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
 :- use_module(rdf(rdf_build)).
-:- use_module(rdf(rdf_graph)).
 :- use_module(rdf(rdf_serial)).
-:- use_module(xml(xml)).
 :- use_module(xml(xml_namespace)).
 :- use_module(xml(xml_stream)).
 :- use_module(xml(xml_to_rdf)).
 
 :- dynamic(bag/1).
 
+:- xml_register_namespace(
+  el,
+  'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl#'
+).
 :- xml_register_namespace(hk, 'http://pilod-huiskluis.appspot.com/data/').
 
 :- db_add_novel(user:prolog_file_type(gz, archive)).
@@ -104,14 +104,39 @@ File =|postcode_66.xml|=, line 432.811.
 
 :- debug(energylabels).
 
-:- setting(energylabels_graph, atom, el, 'The name of the energylabels graph.').
+:- setting(
+  energylabels_graph,
+  atom,
+  el,
+  'The name of the energylabels graph.'
+).
 % This file must be readable.
-:- setting(input_file_name, atom, v20130401, 'The original input file.').
+:- setting(
+  input_file_name,
+  atom,
+  v20130401,
+  'The original input file.'
+).
 % This directory must be readable.
-:- setting(input_files_directory, atom, 'Input', 'The subdirectory for input files.').
+:- setting(
+  input_files_directory,
+  atom,
+  'Input',
+  'The subdirectory for input files.'
+).
 % This directory must be writeable.
-:- setting(output_files_directory, atom, 'Output', 'The subdirectory for output files.').
-:- setting(temporary_file_prefix, atom, 'temp_', 'The prefix for temporary files.').
+:- setting(
+  output_files_directory,
+  atom,
+  'Output',
+  'The subdirectory for output files.'
+).
+:- setting(
+  temporary_file_prefix,
+  atom,
+  'temp_',
+  'The prefix for temporary files.'
+).
 
 
 
@@ -202,15 +227,8 @@ insert_newlines_worker(ToDir, FromFiles):-
 
 % Stage 3 -> Stage 4 (Put small files together into big one).
 to_big_file(FromDir, ToDir):-
-  setting(temporary_file_prefix, Prefix),
-  atomic_concat(Prefix, '*', RE1),
-  directory_file_path(FromDir, RE1, RE2),
-
-  % Now create the big file which now has newlines.
-  create_file(FromDir, big, xml, TempFile),
-  merge_into_one_file(RE2, TempFile),
   create_file(ToDir, big, xml, ToFile),
-  safe_move_file(TempFile, ToFile).
+  merge_into_one_file(FromDir, ToFile).
 
 
 
@@ -232,17 +250,17 @@ xml_to_poscode(FromDir, ToDir):-
   ),
   absolute_file_name(
     postcodes,
-    Turtle_File,
-    [access(write), file_type(turtle), relative_to(ToDir)]
+    RDF_File,
+    [access(write), extensions([rdf]), relative_to(ToDir)]
   ),
-  rdf_save2(Turtle_File, [format(turtle), graph(Graph)]).
+  rdf_save2(RDF_File, [format(rdf_xml), graph(Graph)]).
 
 % The graph is also used as the XML namespace.
 process_postcode(Graph, DOM1):-
   create_house(Graph, DOM1, House),
   Spec =.. ['Pandcertificaat', content],
   xpath(DOM1, //Spec, DOM2),
-  attribute_value_pairs(Graph, Graph, House, DOM2).
+  assert_entry(Graph, House, DOM2).
 
 store_postcodes(Graph, Dir):-
   flag(number_of_files, X, X + 1),
@@ -250,19 +268,10 @@ store_postcodes(Graph, Dir):-
   absolute_file_name(
     FileName,
     File,
-    [access(write), file_type(turtle), relative_to(Dir)]
+    [access(write), extensions([rdf]), relative_to(Dir)]
   ),
-  rdf_save2(File, [format(turtle), graph(Graph)]),
+  rdf_save2(File, [format(rdf_xml), graph(Graph)]),
   rdf_unload_graph(Graph).
-
-/*
-  assert_energyclass(Graph, DOM, House),
-  assert_validity(Graph, DOM, House),
-  assert_joules(Graph, DOM, House),
-  assert_energy_prestationindex(Graph, DOM, House).
-process_postcode(_Graph, DOM):-
-  cowsay(DOM).
-*/
 
 create_house(Graph, DOM, House):-
   Spec1 =.. ['PandVanMeting_postcode', content],
@@ -306,98 +315,89 @@ create_house(Graph, DOM, House):-
     )
   ).
 
-
-
-postcode_cleaning(Graph):-
-  forall(
-    (
-      rdf_literal(House, el:postcode, Postcode, Graph),
-      rdf_datatype(House, el:house_number, Number, Graph)
-    ),
-    (
-      rdfs_assert_individual(House, el:'House', Graph),
-      rdf_retractall_literal(House, el:'PandVanMeting_postcode', _, Graph),
-      rdf_retractall_literal(House, el:'PandVanMeting_huisnummer', _, Graph),
-      rdf_retractall_literal(House, el:'PandVanMeting_huisnummer_toev', _, Graph),
-      rdf_retractall_literal(House, el:'Pand_postcode', _, Graph),
-      rdf_retractall_literal(House, el:'Pand_huisnummer', _, Graph),
-      rdf_retractall_literal(House, el:'Pand_huisnummer_toev', _, Graph)
-    )
+assert_entry(Graph, House, DOM1):-
+  selectchk(element('Pand_huisnummer', _, [HouseNumber]), DOM1, DOM2),
+  selectchk(element('PandVanMeting_huisnummer', _, [HouseNumber]), DOM2, DOM3),
+  selectchk(element('Pand_huisnummer_toev', _, HouseNumberAddition1), DOM3, DOM4),
+  selectchk(element('PandVanMeting_huisnummer_toev', _, HouseNumberAddition1), DOM4, DOM5),
+  xor(
+    HouseNumberAddition1 = [_HouseNumberAddition2],
+    HouseNumberAddition1 = []
   ),
-  forall(
-    rdf_retractall_literal(House, el:'Pand_cert_type', CertificationType, Graph),
-    rdf_assert(House, el:certification_type, el:CertificationType, Graph)
-  ),
-  forall(
-    rdf_retractall_literal(House, el:'Pand_plaats', Place1, Graph),
-    (
-      to_lower(Place1, Place2),
-      rdf_assert(House, el:place, el:Place2, Graph)
-    )
-  ),
-  forall(
-    rdf_retractall_literal(House, el:'Pand_registratiedatum', RegistrationDate1, Graph),
-    (
-      dcg_phrase(date(_Lang, RegistrationDate2), RegistrationDate1),
-      rdf_assert_datatype(House, el:registration_date, date, RegistrationDate2, Graph)
-    )
+  selectchk(element('Pand_postcode', _, [Postcode]), DOM5, DOM6),
+  selectchk(element('PandVanMeting_postcode', _, [Postcode]), DOM6, DOM71),
+  selectchk(element('Pand_gebouwcode', _, BuildingCode1), DOM71, DOM72),
+  selectchk(element('PandVanMeting_gebouwcode', _, BuildingCode1), DOM72, DOM73),
+  
+  % House building code
+  (
+    BuildingCode1 = [BuildingCode2]
+  ->
+    atom_number(BuildingCode2, BuildingCode3),
+    rdf_assert_datatype(House, el:building_code, int, BuildingCode3, Graph)
+  ;
+    BuildingCode1 = []
   ),
   
-  % Measurement
-  forall(
-    rdf_retractall(House, el:'Meting_geldig_tot', ValidDate1, Graph),
-    (
-      rdf_bnode(Measurement),
-      rdf_assert(House, el:measurement, Measurement, Graph),
-      dcg_phrase(date(_Lang, ValidDate2), ValidDate1),
-      rdf_assert_datatype(Measurement, el:valid_until, date, ValidDate2, Graph)
-      forall(
-        rdf_retractall_literal(House, el:'PandVanMeting_energieklasse', EnergyClass, Graph),
-        rdf_assert(Measurement, el:energyclass, el:EnergyClass)
-      ),
-      forall(
-        (
-          rdf_retractall_literal(House, el:'PandVanMeting_energieverbruikmj', Amount1, Graph),
-          rdf_retractall_literal(House, el:'PandVanMeting_energieverbruiktype', Type, Graph)
-        ),
-        (
-          rdf_bnode(Consumption),
-          rdf_assert(Measurement, el:consumption, Consumption, Graph),
-          rdf_assert(Consumption, el:type, el:Type, Graph),
-          atom_number(Amount1, Amount2),
-          rdf_assert_datatype(Consumption, el:energy_consumption, float, Amount2, Graph)
-        )
-      ),
-      forall(
-        rdf_retractall_literal(House, el:'PandVanMeting_opnamedatum', MeasurementDate1, Graph),
-        (
-          dcg_phrase(date(_Lang, MeasurementDate2), MeasurementDate1),
-          rdf_assert_datatype(Measurement, el:measurement_date, MeasurementDate2, Graph)
-        )
-      ),
-      forall(
-        rdf_retractall_literal(House, el:'PandVanMeting_energieprestatieindex', Index1, Graph),
-        (
-          atom_number(Index1, Index2),
-          rdf_assert_datatype(Measurement, el:prestation_index, float, Index2, Graph)
-        )
-      ),
-      forall(
-        retractall(House, el:'Afmeldnummer', Afmeldnummer1, Graph),
-        (
-          atom_number(Afmeldnummer1, Afmeldnummer2),
-          rdf_assert_datatype(Measurement, el:afmeldnummer, Afmeldnummer2, Graph)
-        )
-      )
-    )
+  % House certification type
+  selectchk(element('Pand_cert_type', _, [CertificationType1]), DOM73, DOM8),
+  rdf_global_id(el:CertificationType1, CertificationType2),
+  rdf_assert(House, el:certification_type, CertificationType2, Graph),
+
+  % House place
+  selectchk(element('Pand_plaats', _, [Place1]), DOM8, DOM9),
+  downcase_atom(Place1, Place2),
+  rdf_global_id(el:Place2, Place3),
+  rdf_assert_literal(House, el:place, Place3, Graph),
+
+  % House registration date
+  selectchk(element('Pand_registratiedatum', _, [RegistrationDate1]), DOM9, DOM10),
+  dcg_phrase(date(_, RegistrationDate2), RegistrationDate1),
+  rdf_assert_datatype(House, el:registration_date, date, RegistrationDate2, Graph),
+
+  % House ---> Measurement
+  selectchk(element('Meting_geldig_tot', _, [ValidityDate1]), DOM10, DOM11),
+  rdf_bnode(Measurement),
+  rdf_assert(House, el:measurement, Measurement, Graph),
+  dcg_phrase(date(_, ValidityDate2), ValidityDate1),
+  rdf_assert_datatype(Measurement, el:valid_until, date, ValidityDate2, Graph),
+
+  % Energy class
+  selectchk(element('PandVanMeting_energieklasse', _, [EnergyClass1]), DOM11, DOM12),
+  rdf_global_id(el:EnergyClass1, EnergyClass2),
+  rdf_assert(Measurement, el:energyclass, EnergyClass2, Graph),
+
+  % Measurement amount
+  selectchk(element('PandVanMeting_energieverbruikmj', _, [Amount1]), DOM12, DOM13),
+  selectchk(element('PandVanMeting_energieverbruiktype', _, [Type1]), DOM13, DOM14),
+  rdf_bnode(Consumption),
+  rdf_assert(Measurement, el:consumption, Consumption, Graph),
+  rdf_global_id(el:Type1, Type2),
+  rdf_assert(Consumption, el:type, Type2, Graph),
+  atom_number(Amount1, Amount2),
+  rdf_assert_datatype(Consumption, el:energy_consumption, float, Amount2, Graph),
+
+  % Measurement date
+  selectchk(element('PandVanMeting_opnamedatum', _, [MeasurementDate1]), DOM14, DOM15),
+  dcg_phrase(date(_, MeasurementDate2), MeasurementDate1),
+  rdf_assert_datatype(Measurement, el:measurement_date, date, MeasurementDate2, Graph),
+
+  % Measurement prestation index
+  selectchk(element('PandVanMeting_energieprestatieindex', _, [Index1]), DOM15, DOM16),
+  atom_number(Index1, Index2),
+  rdf_assert_datatype(Measurement, el:prestation_index, float, Index2, Graph),
+
+  % Afmeldnummer [?]
+  selectchk(element('Afmeldnummer', _, [Afmeldnummer1]), DOM16, DOM17),
+  atom_number(Afmeldnummer1, Afmeldnummer2),
+  rdf_assert_datatype(Measurement, el:afmeldnummer, int, Afmeldnummer2, Graph),
+
+  xor(
+    DOM17 = [],
+    cowsay(DOM17)
   ).
 
 init:-
-  setting(energylabels_graph, Graph),
-  xml_register_namespace(
-    Graph,
-    'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl#'
-  ),
   create_personal_subdirectory('Data', Data),
   db_add_novel(user:file_search_path(data, Data)),
   create_personal_subdirectory('Data'('Input'), Input),
