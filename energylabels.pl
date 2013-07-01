@@ -251,9 +251,9 @@ xml_to_poscode(FromDir, ToDir):-
   absolute_file_name(
     postcodes,
     RDF_File,
-    [access(write), extensions([rdf]), relative_to(ToDir)]
+    [access(write), file_type(turtle), relative_to(ToDir)]
   ),
-  rdf_save2(RDF_File, [format(rdf_xml), graph(Graph)]).
+  rdf_save2(RDF_File, [format(turtle), graph(Graph)]).
 
 % The graph is also used as the XML namespace.
 process_postcode(Graph, DOM0):-
@@ -315,11 +315,14 @@ process_postcode(Graph, DOM0):-
   % Energy class
   selectchk(element('PandVanMeting_energieklasse', _, [EnergyClass1]), DOM11, DOM12),
   rdf_global_id(el:EnergyClass1, EnergyClass2),
-  rdf_assert(Certificate, el:energyclass, EnergyClass2, Graph),
+  uri_iri(EnergyClass2, EnergyClass3),
+  rdf_assert(Certificate, el:energyclass, EnergyClass3, Graph),
+  rdfs_assert_individual(EnergyClass3, el:'EnergyClass', Graph),
 
   % Certificate's energy consumption
   rdf_bnode(Consumption),
   rdf_assert(Certificate, el:energy_consumption, Consumption, Graph),
+  rdfs_assert_individual(Consumption, el:'EnergyConsumption', Graph),
   selectchk(element('PandVanMeting_energieverbruikmj', _, [Amount1]), DOM12, DOM13),
   atom_number(Amount1, Amount2),
   rdf_assert_datatype(Consumption, el:amount, float, Amount2, Graph),
@@ -327,7 +330,9 @@ process_postcode(Graph, DOM0):-
   % Measurement amount
   selectchk(element('PandVanMeting_energieverbruiktype', _, [Type1]), DOM13, DOM14),
   rdf_global_id(el:Type1, Type2),
-  rdf_assert(Consumption, el:type, Type2, Graph),
+  uri_iri(Type2, Type3),
+  rdf_assert(Consumption, el:type, Type3, Graph),
+  rdfs_assert_individual(Type3, el:'EnergyUsageType', Graph),
 
   DOM20 = DOM14,
 
@@ -335,6 +340,8 @@ process_postcode(Graph, DOM0):-
   flag(building, BId, BId + 1),
   format(atom(BName), 'b_~w', [BId]),
   rdf_global_id(el:BName, Building),
+  rdfs_assert_individual(Building, el:'Building', Graph),
+  rdf_assert(Building, el:has_certificate, Certificate, Graph),
 
   % Building's postal code
   selectchk(element('Pand_postcode', _, [Postcode10]), DOM20, DOM21),
@@ -353,7 +360,9 @@ process_postcode(Graph, DOM0):-
   selectchk(element('Pand_plaats', _, [Place1]), DOM23, DOM24),
   downcase_atom(Place1, Place2),
   rdf_global_id(el:Place2, Place3),
-  rdf_assert_literal(Building, el:place, Place3, Graph),
+  uri_iri(Place3, Place4),
+  rdf_assert(Building, el:place, Place4, Graph),
+  rdfs_assert_individual(Place4, el:'Place', Graph),
 
   % Building's certification type. Either 'house' or 'utility'.
   % @tbd Use switch for this.
@@ -368,13 +377,14 @@ process_postcode(Graph, DOM0):-
   ->
     rdf_global_id(el:utility, CertificationType2)
   ),
-  rdf_assert(Building, el:certification_type, CertificationType2, Graph),
+  uri_iri(CertificationType2, CertificationType3),
+  rdf_assert(Building, el:certification_type, CertificationType3, Graph),
+  rdfs_assert_individual(CertificationType3, el:'CertificationType', Graph),
 
   % Building's registration date
   selectchk(element('Pand_registratiedatum', _, [RegistrationDate1]), DOM25, DOM26),
   dcg_phrase(date(_, RegistrationDate2), RegistrationDate1),
   rdf_assert_datatype(Building, el:registration_date, date, RegistrationDate2, Graph),
-
 
   % Undocumented 'Pand_gebouwcode'
   selectchk(element('Pand_gebouwcode', _, BuildingCode1), DOM26, DOM27),
@@ -403,9 +413,9 @@ store_postcodes(Graph, Dir):-
   absolute_file_name(
     FileName,
     File,
-    [access(write), extensions([rdf]), relative_to(Dir)]
+    [access(write), file_type(turtle), relative_to(Dir)]
   ),
-  rdf_save2(File, [format(rdf_xml), graph(Graph)]),
+  rdf_save2(File, [format(turtle), graph(Graph)]),
   rdf_unload_graph(Graph).
 
 init:-
