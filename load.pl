@@ -12,7 +12,7 @@ load_energylabels:-
   % Load the PGC.
   assert(user:file_search_path(pgc, energylabels('PGC'))),
   (
-    predicate_property(debug, visible)
+    predicate_property(debug_project, visible)
   ->
     ensure_loaded(pgc(debug))
   ;
