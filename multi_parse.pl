@@ -14,12 +14,64 @@
   ]
 ).
 
-/** <module> DOUBLE_PARSE
+/** <module> Double parse
 
 Double parse for energy labels.
 
+An example of the XML that is converted to RDF by this module:
+~~~{.xml}
+<Pandcertificaat>
+  <PandVanMeting_postcode>
+    9415RD
+  </PandVanMeting_postcode>
+  <PandVanMeting_huisnummer>
+    2
+  </PandVanMeting_huisnummer>
+  <PandVanMeting_huisnummer_toev />
+  <PandVanMeting_gebouwcode />
+  <PandVanMeting_opnamedatum>
+    20070914
+  </PandVanMeting_opnamedatum>
+  <PandVanMeting_energieprestatieindex>
+    0.23
+  </PandVanMeting_energieprestatieindex>
+  <PandVanMeting_energieverbruiktype>
+    absoluut
+  </PandVanMeting_energieverbruiktype>
+  <PandVanMeting_energieverbruikmj>
+    21801.93
+  </PandVanMeting_energieverbruikmj>
+  <PandVanMeting_energieklasse>
+    A++
+  </PandVanMeting_energieklasse>
+  <Meting_geldig_tot>
+    20170914
+  </Meting_geldig_tot>
+  <Afmeldnummer>
+    475896804
+  </Afmeldnummer>
+  <Pand_registratiedatum>
+    20070919
+  </Pand_registratiedatum>
+  <Pand_postcode>
+    9415RD
+  </Pand_postcode>
+  <Pand_huisnummer>
+    2
+  </Pand_huisnummer>
+  <Pand_huisnummer_toev />
+  <Pand_gebouwcode />
+  <Pand_plaats>
+    HIJKEN
+  </Pand_plaats>
+  <Pand_cert_type>
+    W
+  </Pand_cert_type>
+</Pandcertificaat>
+~~~
+
 @author Wouter Beek
-@version 2013/07
+@version 2013/07, 2013/09
 */
 
 :- use_module(dcg(dcg_date)).
@@ -36,16 +88,9 @@ Double parse for energy labels.
 :- use_module(xml(xml_namespace)).
 :- use_module(xml(xml_stream)).
 
-:- xml_register_namespace(
-  el,
-  'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl#'
-).
-:- setting(
-  energylabels_graph,
-  atom,
-  el,
-  'The name of the energylabels graph.'
-).
+:- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl#').
+
+:- setting(energylabels_graph, atom, el, 'The name of the energylabels graph.').
 
 :- db_add_novel(user:prolog_file_type(ttl, turtle)).
 :- db_add_novel(user:prolog_file_type(xml, xml)).
@@ -72,11 +117,13 @@ multi_parse(FromDir, ToDir, Number):-
   multi_parse(FromDir, ToDir, Number, Number).
 
 multi_parse(FromDir, ToDir, Min, Max):-
+  % "We need some more oil for the machines to burn".
   set_prolog_stack(global, limit(2*10**9)),
+  % The big XML file.
   absolute_file_name(
     big,
     FromFile,
-    [access(read), file_type(xml), relative_to(FromDir)]
+    [access(read),file_type(xml),relative_to(FromDir)]
   ),
   setting(energylabels_graph, Graph),
   forall(
@@ -86,18 +133,14 @@ multi_parse(FromDir, ToDir, Min, Max):-
 
 multi_parse1(FromFile, Graph, Number, ToDir):-
   reset_parse,
-  xml_stream(
-    FromFile,
-    'Pandcertificaat',
-    multi_parse1(Graph, Number, Name)
-  ),
+  xml_stream(FromFile, 'Pandcertificaat', multi_parse1(Graph, Number, Name)),
   absolute_file_name(
     Name,
     RDF_File,
     [access(write), file_type(turtle), relative_to(ToDir)]
   ),
   rdf_save2(RDF_File, [format(turtle), graph(Graph)]),
-  cowsay('Parse #~w is done!', [Number]),
+  cowspeak:cowspeak('Parse #~w is done!', [Number]),
   rdf_unload_graph(Graph).
 
 multi_parse1(Graph, Number, Name, DOM1):-
@@ -162,13 +205,13 @@ multi_parse2(Graph, 8, 'CertificateEnergyClass', DOM1):-
   rdf_global_id(el:EnergyClass1, EnergyClass2),
   uri_iri(EnergyClass2, EnergyClass3),
   rdf_assert(Certificate, el:energyclass, EnergyClass3, Graph),
-  rdfs_assert_individual(EnergyClass3, el:'EnergyClass', Graph).
+  rdf_assert_individual(EnergyClass3, el:'EnergyClass', Graph).
 multi_parse2(Graph, 9, 'CertificateEnergyConsumption', DOM1):-
   get_certificate(Certificate),
   % Certificate's energy consumption
   rdf_bnode(Consumption),
   rdf_assert(Certificate, el:energy_consumption, Consumption, Graph),
-  rdfs_assert_individual(Consumption, el:'EnergyConsumption', Graph),
+  rdf_assert_individual(Consumption, el:'EnergyConsumption', Graph),
   selectchk(element('PandVanMeting_energieverbruikmj', _, [Amount1]), DOM1, DOM2),
   atom_number(Amount1, Amount2),
   rdf_assert_datatype(Consumption, el:amount, float, Amount2, Graph),
@@ -178,7 +221,7 @@ multi_parse2(Graph, 9, 'CertificateEnergyConsumption', DOM1):-
   rdf_global_id(el:Type1, Type2),
   uri_iri(Type2, Type3),
   rdf_assert(Consumption, el:type, Type3, Graph),
-  rdfs_assert_individual(Type3, el:'EnergyUsageType', Graph).
+  rdf_assert_individual(Type3, el:'EnergyUsageType', Graph).
 multi_parse2(Graph, 10, 'BuildingType', DOM1):-
   get_building(Building),
   % Building's certification type. Either 'house' or 'utility'.
@@ -195,7 +238,7 @@ multi_parse2(Graph, 10, 'BuildingType', DOM1):-
     rdf_global_id(el:'Utility', CertificationType2)
   ),
   uri_iri(CertificationType2, CertificationType3),
-  rdfs_assert_individual(Building, CertificationType3, Graph).
+  rdf_assert_individual(Building, CertificationType3, Graph).
 multi_parse2(Graph, 11, 'BuildingPostcode', DOM1):-
   get_building(Building),
   % Building's postal code
@@ -220,7 +263,7 @@ multi_parse2(Graph, 14, 'BuildingPlace', DOM1):-
   rdf_global_id(el:Place2, Place3),
   uri_iri(Place3, Place4),
   rdf_assert(Building, el:place, Place4, Graph),
-  rdfs_assert_individual(Place4, el:'Place', Graph).
+  rdf_assert_individual(Place4, el:'Place', Graph).
 multi_parse2(Graph, 15, 'BuildingRegistrationDate', DOM1):-
   get_building(Building),
   % Building's registration date
@@ -250,7 +293,7 @@ multi_parse2(Graph, 18, 'BuildingCertificate', _DOM1):-
   rdf_assert(Building, el:has_certificate, Certificate, Graph).
 multi_parse2(Graph, 19, 'CertificateType', _DOM1):-
   get_certificate(Certificate),
-  rdfs_assert_individual(Certificate, el:'EP_Certificate', Graph).
+  rdf_assert_individual(Certificate, el:'EP_Certificate', Graph).
 
 reset_parse:-
   flag(certificate, _CId, 0),

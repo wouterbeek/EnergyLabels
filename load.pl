@@ -1,4 +1,8 @@
+% The load file for the EnergyLabels project.
+
 project_name('EnergyLabels').
+
+:- initialization(load_energylabels).
 
 load_energylabels:-
   source_file(load_energylabels, ThisFile),
@@ -19,7 +23,5 @@ load_energylabels:-
     ensure_loaded(pgc(load))
   ),
   
-  % STCN main module.
   ensure_loaded(energylabels(energylabels)).
-:- load_energylabels.
 

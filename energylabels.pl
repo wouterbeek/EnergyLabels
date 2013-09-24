@@ -1,11 +1,15 @@
 :- module(
   energylabels,
   [
-    energylabels_script/0
+    stage0/0,
+    stage1/0,
+    stage2/0,
+    stage3/0,
+    stage4/0
   ]
 ).
 
-/** <module> ENERGYLABELS
+/** <module> Energylabels
 
 Script for generating an RDF representation of an XML file on energylabels.
 The result is intended to be used within the Huiskluis project.
@@ -60,33 +64,22 @@ File =|postcode_66.xml|=, line 432.811.
 @see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
 @tbd process_create does not form for `cat FROM > TO`.
 @tbd Big memory profile for stage 2 or 3.
-@version 2013/04, 2013/06-2013/07
+@version 2013/04, 2013/06-2013/07, 2013/09
 */
 
-:- use_module(dcg(dcg_date)).
-:- use_module(dcg(dcg_generic)).
 :- use_module(energylabels(multi_parse)).
-:- use_module(generics(atom_ext)).
+:- use_module(energylabels(single_parse)).
 :- use_module(generics(codes_ext)).
-:- use_module(generics(cowspeak)).
 :- use_module(generics(db_ext)).
 :- use_module(generics(list_ext)).
-:- use_module(generics(meta_ext)).
 :- use_module(generics(script_stage)).
 :- use_module(generics(thread_ext)).
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
-:- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).
-:- use_module(library(xpath)).
 :- use_module(os(dir_ext)).
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
-:- use_module(rdf(rdf_build)).
-:- use_module(rdf(rdf_serial)).
-:- use_module(rdfs(rdfs_build)).
-:- use_module(xml(xml_stream)).
-:- use_module(xml(xml_to_rdf)).
 
 :- db_add_novel(user:prolog_file_type(txt, text)).
 :- db_add_novel(user:prolog_file_type(tmp, temporary)).
@@ -156,7 +149,7 @@ to_small_files(FromDir, ToDir):-
   absolute_file_name(
     FromName,
     FromFile,
-    [access(read), extensions([dx]), relative_to(FromDir)]
+    [access(read),extensions([dx]),relative_to(FromDir)]
   ),
   setting(temporary_file_prefix, Prefix),
   split_into_smaller_files(FromFile, ToDir, Prefix).
@@ -170,7 +163,7 @@ insert_newlines(FromDir, ToDir):-
   atomic_concat(Prefix, '*', RE0),
   directory_file_path(FromDir, RE0, RE),
   expand_file_name(RE, FromFiles),
-  run_on_sublists(FromFiles, insert_newlines_worker(ToDir)).
+  run_on_sublists(FromFiles, energylabels:insert_newlines_worker(ToDir)).
 
 % This predicate can only run in threads.
 % See module THREAD_EXT.
@@ -185,15 +178,17 @@ insert_newlines_worker(ToDir, FromFiles):-
         absolute_file_name(
           FileName,
           ToFile,
-          [access(write), file_type(text), relative_to(ToDir)]
+          [access(write),file_type(text),relative_to(ToDir)]
         ),
         read_stream_to_codes(Stream, Codes),
         codes_replace2(Codes, [62,60], [62,10,60], NewCodes_),
         % It will sometimes happen that the cuttoff lies exactly
         % in between =|>|= and =|<|=.
-        if_then_else(
-          first(NewCodes_, 60),
-          NewCodes = [10 | NewCodes_],
+        (
+          first(NewCodes_, 60)
+        ->
+          NewCodes = [10|NewCodes_]
+        ;
           NewCodes = NewCodes_
         ),
         atom_codes(NewAtom, NewCodes),
@@ -224,28 +219,24 @@ init:-
   create_personal_subdirectory('Data'('Output'), Output),
   db_add_novel(user:file_search_path(output, Output)).
 
-energylabels_script:-
-  energylabels_script1,
-  energylabels_script2.
-energylabels_script1:-
-  init,
-  stage0, stage1, stage2, stage3.
-energylabels_script2:-
-  init,
-  stage4.
 stage0:-
   init,
   script_stage(0, copy_input_unarchived).
+
 stage1:-
   init,
   script_stage(1, to_small_files).
+
 stage2:-
   init,
   script_stage(2, insert_newlines).
+
 stage3:-
   init,
   script_stage(3, to_big_file).
+
 stage4:-
   init,
-  script_stage(4, multi_parse).
+  thread_create(script_stage(4, single_parse), _Id, []).
+  %script_stage(4, multi_parse).
 
