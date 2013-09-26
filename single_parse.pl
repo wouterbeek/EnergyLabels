@@ -11,6 +11,34 @@
 Process all energylabels in a single parse.
 On my machine this does not work with 8 GB of RAM...
 
+~~~
+element('PandVanMeting_postcode',[],['1054ZJ']),
+element('PandVanMeting_huisnummer',[],['121']),
+element('PandVanMeting_huisnummer_toev',[],['E']),
+element('PandVanMeting_gebouwcode',[],[]),
+element('PandVanMeting_opnamedatum',[],['20100111']),
+element('PandVanMeting_energieprestatieindex',[],['1.53']),
+element('PandVanMeting_energieverbruiktype',[],[absoluut]),
+element('PandVanMeting_energieverbruikmj',[],['41074.41']),
+element('PandVanMeting_energieverbruikelektriciteit',[],['507.84']),
+element('PandVanMeting_energieverbruikgas',[],['1034.59']),
+element('PandVanMeting_energieverbruikwarmte',[],['0.00']),
+element('PandVanMeting_energieverbruikco2',[],['2129.01']),
+element('PandVanMeting_opnameblauwdruk',[],['0']),
+element('PandVanMeting_opnameobservatie',[],['1']),
+element('PandVanMeting_opnameeigenaarinformatie',[],['0']),
+element('PandVanMeting_energieklasse',[],['C']),
+element('Meting_geldig_tot',[],['20200111']),
+element('Afmeldnummer',[],['161925194']),
+element('Pand_registratiedatum',[],['20100114']),
+element('Pand_postcode',[],['1054ZJ']),
+element('Pand_huisnummer',[],['121']),
+element('Pand_huisnummer_toev',[],['E']),
+element('Pand_gebouwcode',[],[]),
+element('Pand_plaats',[],['AMSTERDAM']),
+element('Pand_cert_type',[],['W'])
+~~~
+
 @author Wouter Beek
 @versionm 2013/06-2013/07, 2013/09
 */
@@ -64,26 +92,36 @@ process_postcode(G, DOM0):-
 
 :- rdf_meta(trans(?,r,?)).
 
-trans('Afmeldnummer',                        el:afmeldnummer,           integer).
-trans('Meting_geldig_tot',                   el:meting_geldig_tot,      date   ).
-trans('Pand_cert_type',                      el:cert_type,              literal).
-trans('Pand_gebouwcode',                     el:gebouwcode,             literal).
-trans('Pand_huisnummer',                     el:huisnummer,             integer).
-trans('Pand_huisnummer_toev',                el:huisnummer_toevoeging,  literal).
-trans('Pand_plaats',                         el:plaats,                 literal).
-trans('Pand_postcode',                       el:postcode,               literal).
-trans('Pand_registratiedatum',               el:registratie_datum,      date   ).
-trans('PandVanMeting_energieklasse',         el:energie_klasse,         literal).
-trans('PandVanMeting_energieprestatieindex', el:energie_prestatieindex, literal).
-trans('PandVanMeting_energieverbruiktype',   el:energie_verbruik_type,  literal).
-trans('PandVanMeting_energieverbruikmj',     el:energie_verbruik_mj,    decimal).
-trans('PandVanMeting_gebouwcode',            el:gebouwcode,             literal).
-trans('PandVanMeting_huisnummer',            el:huisnummer,             integer).
-trans('PandVanMeting_huisnummer_toev',       el:huisnummer_toevoeging,  literal).
-trans('PandVanMeting_opnamedatum',           el:opnamedatum,            date   ).
-trans('PandVanMeting_postcode',              el:postcode,               literal).
+trans('Afmeldnummer',                               el:afmeldnummer,                   integer).
+trans('Meting_geldig_tot',                          el:meting_geldig_tot,              date   ).
+trans('Pand_cert_type',                             el:cert_type,                      literal).
+trans('Pand_gebouwcode',                            el:gebouwcode,                     literal).
+trans('Pand_huisnummer',                            el:huisnummer,                     integer).
+trans('Pand_huisnummer_toev',                       el:huisnummer_toevoeging,          literal).
+trans('Pand_plaats',                                el:plaats,                         literal).
+trans('Pand_postcode',                              el:postcode,                       literal).
+trans('Pand_registratiedatum',                      el:registratie_datum,              date   ).
+trans('PandVanMeting_energieklasse',                el:energie_klasse,                 literal).
+trans('PandVanMeting_energieprestatieindex',        el:energie_prestatieindex,         decimal).
+trans('PandVanMeting_energieverbruikco2',           el:energie_verbruik_co2,           decimal).
+trans('PandVanMeting_energieverbruikelektriciteit', el:energie_verbruik_elektriciteit, decimal).
+trans('PandVanMeting_energieverbruikgas',           el:energie_verbruik_gas,           decimal).
+trans('PandVanMeting_energieverbruiktype',          el:energie_verbruik_type,          literal).
+trans('PandVanMeting_energieverbruikmj',            el:energie_verbruik_mj,            decimal).
+trans('PandVanMeting_energieverbruikwarmte',        el:energie_verbruik_warmte,        decimal).
+trans('PandVanMeting_gebouwcode',                   el:gebouwcode,                     literal).
+trans('PandVanMeting_huisnummer',                   el:huisnummer,                     integer).
+trans('PandVanMeting_huisnummer_toev',              el:huisnummer_toevoeging,          literal).
+trans('PandVanMeting_opnameblauwdruk',              el:opname_blauwdruk,               integer).
+trans('PandVanMeting_opnamedatum',                  el:opname_datum,                   date   ).
+trans('PandVanMeting_opnameeigenaarinformatie',     el:opname_eigenaarinformatie,      integer).
+trans('PandVanMeting_opnameobservatie',             el:opname_observatie,              integer).
+trans('PandVanMeting_postcode',                     el:postcode,                       literal).
 
 process_postcode2(G, DOM1):-
+  memberchk(element('PandVanMeting_postcode', _, [Postcode]), DOM1),
+  % Amsterdam
+  sub_atom(Postcode, 0, 2, _, '10'), !,
 (
   create_resource(
     DOM1,
@@ -104,10 +142,17 @@ process_postcode2(G, DOM1):-
       'Meting_geldig_tot',
       'PandVanMeting_energieklasse',
       'PandVanMeting_energieprestatieindex',
+      'PandVanMeting_energieverbruikco2',
+      'PandVanMeting_energieverbruikelektriciteit',
+      'PandVanMeting_energieverbruikgas',
       'PandVanMeting_energieverbruiktype',
       'PandVanMeting_energieverbruikmj',
+      'PandVanMeting_energieverbruikwarmte',
       'PandVanMeting_gebouwcode',
-      'PandVanMeting_opnamedatum'
+      'PandVanMeting_opnameblauwdruk',
+      'PandVanMeting_opnamedatum',
+      'PandVanMeting_opnameeigenaarinformatie',
+      'PandVanMeting_opnameobservatie'
     ],
     trans,
     Cert,
@@ -127,6 +172,7 @@ process_postcode2(G, DOM1):-
     Building,
     DOM4
   ),
+  rdf_assert(Building, el:certificaat, Cert, G),
   create_triples(
     DOM4,
     [
@@ -143,13 +189,15 @@ process_postcode2(G, DOM1):-
   ), !,
   
   % DEB
-  flag(postcode, Id, Id + 1),
-  memberchk(element('PandVanMeting_postcode', _, [Postcode]), DOM1),
-  debug(single_parse, '[~w] Adding postcode: ~w', [Id,Postcode])
+  flag(postcode, Id1, Id1 + 1),
+  flag(amsterdam, Id2, Id2 + 1),
+  debug(single_parse, '[~w] [~w] Adding postcode: ~w', [Id1,Id2,Postcode])
 ;
   gtrace,
   process_postcode2(G, DOM1)
 ).
+process_postcode2(_G, _DOM):-
+  flag(postcode, Id, Id + 1).
 
 temp_save(G, Dir):-
   current_time(Base),
