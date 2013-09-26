@@ -9,35 +9,8 @@
 /** <module> Single parse
 
 Process all energylabels in a single parse.
-On my machine this does not work with 8 GB of RAM...
 
-~~~
-element('PandVanMeting_postcode',[],['1054ZJ']),
-element('PandVanMeting_huisnummer',[],['121']),
-element('PandVanMeting_huisnummer_toev',[],['E']),
-element('PandVanMeting_gebouwcode',[],[]),
-element('PandVanMeting_opnamedatum',[],['20100111']),
-element('PandVanMeting_energieprestatieindex',[],['1.53']),
-element('PandVanMeting_energieverbruiktype',[],[absoluut]),
-element('PandVanMeting_energieverbruikmj',[],['41074.41']),
-element('PandVanMeting_energieverbruikelektriciteit',[],['507.84']),
-element('PandVanMeting_energieverbruikgas',[],['1034.59']),
-element('PandVanMeting_energieverbruikwarmte',[],['0.00']),
-element('PandVanMeting_energieverbruikco2',[],['2129.01']),
-element('PandVanMeting_opnameblauwdruk',[],['0']),
-element('PandVanMeting_opnameobservatie',[],['1']),
-element('PandVanMeting_opnameeigenaarinformatie',[],['0']),
-element('PandVanMeting_energieklasse',[],['C']),
-element('Meting_geldig_tot',[],['20200111']),
-element('Afmeldnummer',[],['161925194']),
-element('Pand_registratiedatum',[],['20100114']),
-element('Pand_postcode',[],['1054ZJ']),
-element('Pand_huisnummer',[],['121']),
-element('Pand_huisnummer_toev',[],['E']),
-element('Pand_gebouwcode',[],[]),
-element('Pand_plaats',[],['AMSTERDAM']),
-element('Pand_cert_type',[],['W'])
-~~~
+According to Wouter Beek there are 639.003 entries in the XML data.
 
 @author Wouter Beek
 @versionm 2013/06-2013/07, 2013/09
