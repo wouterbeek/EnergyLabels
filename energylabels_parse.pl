@@ -30,7 +30,7 @@ According to Wouter Beek there are 639.003 entries in the XML data.
 :- use_module(xml(xml_stream)).
 :- use_module(xml(xml_to_rdf)).
 
-:- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl#').
+:- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
 
 :- rdf_meta(trans(?,r,?)).
 
