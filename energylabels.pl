@@ -67,8 +67,7 @@ File =|postcode_66.xml|=, line 432.811.
 @version 2013/04, 2013/06-2013/07, 2013/09
 */
 
-:- use_module(energylabels(multi_parse)).
-:- use_module(energylabels(single_parse)).
+:- use_module(energylabels(energylabels_parse)).
 :- use_module(generics(codes_ext)).
 :- use_module(generics(db_ext)).
 :- use_module(generics(list_ext)).
@@ -237,6 +236,5 @@ stage3:-
 
 stage4:-
   init,
-  thread_create(script_stage(4, single_parse), _Id, []).
-  %script_stage(4, multi_parse).
+  thread_create(script_stage(4, energylabels_parse), _Id, []).
 
