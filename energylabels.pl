@@ -64,7 +64,7 @@ File =|postcode_66.xml|=, line 432.811.
 @see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
 @tbd process_create does not form for `cat FROM > TO`.
 @tbd Big memory profile for stage 2 or 3.
-@version 2013/04, 2013/06-2013/07, 2013/09
+@version 2013/04, 2013/06-2013/07, 2013/09-2013/10
 */
 
 :- use_module(energylabels(energylabels_parse)).
@@ -73,6 +73,8 @@ File =|postcode_66.xml|=, line 432.811.
 :- use_module(generics(list_ext)).
 :- use_module(generics(script_stage)).
 :- use_module(generics(thread_ext)).
+:- use_module(generics(user_input)).
+:- use_module(library(archive)).
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
 :- use_module(library(settings)).
@@ -115,18 +117,23 @@ File =|postcode_66.xml|=, line 432.811.
 
 
 
+% This allows the stages to be performed individually.
+% For debugging purposes.
+stage0:- script_stage(0, copy_input_unarchived).
+stage1:- script_stage(1, to_small_files).
+stage2:- script_stage(2, insert_newlines).
+stage3:- script_stage(3, to_big_file).
+stage4:- thread_create(script_stage(4, energylabels_parse), _Id, []).
+
 % Stage 0 (Input) -> Stage 1
-copy_input_unarchived(From, To):-
-  setting(input_file_name, FileName),
-  absolute_file_name(
-    FileName,
-    FromFile,
-    [access(read), extensions([dx]), relative_to(From)]
-  ),
+copy_input_unarchived(FromDir, ToDir):-
+  user_input_file('Enter the filepath of the input file.', FromDir, FromFile),
+  access_file(FromFile, read),
+  file_name(FromFile, FromDir, FileName, FileExt),
   absolute_file_name(
     FileName,
     ToFile,
-    [access(write), extensions([dx]), relative_to(To)]
+    [access(write),extensions([FileExt]),relative_to(ToDir)]
   ),
   safe_copy_file(FromFile, ToFile).
 copy_input_archived(FromDir, ToDir):-
@@ -206,35 +213,4 @@ insert_newlines_worker(ToDir, FromFiles):-
 to_big_file(FromDir, ToDir):-
   create_file(ToDir, big, xml, ToFile),
   merge_into_one_file(FromDir, ToFile).
-
-
-
-init:-
-  set_prolog_stack(global, limit(2*10**9)),
-  create_personal_subdirectory('Data', Data),
-  db_add_novel(user:file_search_path(data, Data)),
-  create_personal_subdirectory('Data'('Input'), Input),
-  db_add_novel(user:file_search_path(input, Input)),
-  create_personal_subdirectory('Data'('Output'), Output),
-  db_add_novel(user:file_search_path(output, Output)).
-
-stage0:-
-  init,
-  script_stage(0, copy_input_unarchived).
-
-stage1:-
-  init,
-  script_stage(1, to_small_files).
-
-stage2:-
-  init,
-  script_stage(2, insert_newlines).
-
-stage3:-
-  init,
-  script_stage(3, to_big_file).
-
-stage4:-
-  init,
-  thread_create(script_stage(4, energylabels_parse), _Id, []).
 
