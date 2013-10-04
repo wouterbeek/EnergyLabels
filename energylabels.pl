@@ -71,7 +71,7 @@ script:-
   script_stage(1, to_small_files),
   script_stage(2, insert_newlines),
   script_stage(3, to_big_file),
-  thread_create(script_stage(4, energylabels_parse), _Id, []),
+  script_stage(4, energylabels_parse),
   script_end.
 
 % Stage 0 (Input) -> Stage 1
