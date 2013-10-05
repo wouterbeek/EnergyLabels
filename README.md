@@ -27,9 +27,10 @@ The translation is as follows:
      a generic XML2RDF conversion (from the Prolog Generics Collection).
   4. The resulting RDF is stored into a Turtle file.
 
-According to this conversion tool, the XML file contains 2.354.560 measurements.
+According to this conversion tool, the XML file contains
+2.354.560 measurements.
 
 Wouter Beek
 me@wouterbeek.com
 2013/04/08
-2013/10/04
+2013/10/05

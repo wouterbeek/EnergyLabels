@@ -1,7 +1,7 @@
 :- module(
   energylabels_parse,
   [
-    energylabels_parse/2 % +FromDirectory:atom
+    energylabels_parse/2 % +FromFile:atom
                          % +ToDirectory:atom
   ]
 ).
@@ -38,21 +38,16 @@ Process all energylabels in a single parse.
 
 
 
-%! energylabels_parse(+FromDirectory:atom, +ToDirectory:atom) is det.
+%! energylabels_parse(+FromFile:atom, +ToDirectory:atom) is det.
 % Since the number of entries in the energylabels dataset is too big to
 % keep into memory, we are going to translate the XML to 10 separate RDF
 % graphs. We do this sequentially, cleaning out the RDF index in between
 % these 10 runs.
 
-energylabels_parse(FromDir, ToDir):-
-  absolute_file_name(
-    big,
-    FromFile,
-    [access(read),file_type(xml),relative_to(FromDir)]
-  ),
+energylabels_parse(FromFile, ToDir):-
   rdf_unload_graph(el),
   forall(
-    between(0, 9, N),
+    between(1, 9, N),
     (
       atom_number(Prefix, N),
       xml_stream(FromFile, 'Pandcertificaat', process_postcode(el, Prefix)),
@@ -71,13 +66,31 @@ process_postcode(G, Prefix, DOM0):-
   Spec =.. ['Pandcertificaat',content],
   xpath_chk(DOM0, //Spec, DOM1),
   (
-    process_postcode_(G, Prefix, DOM1), !
+    process_postcode_(G, Prefix, DOM1), !,
+    
+    % DEB
+    (
+      debugging(energylabels_parse, true)
+    ->
+      flag(postcode_all, X, X + 1),
+      flag(postcode, Y, Y),
+      (
+        X mod 10000 =:= 0
+      ->
+        debug(energylabels_parse, 'Processing entry #~w; scoped #~w.', [X,Y])
+      ;
+        true
+      )
+    ;
+      true
+    )
   ;
     % DEB
     gtrace, process_postcode_(G, Prefix, DOM1)
   ).
 
 process_postcode_(G, Prefix, DOM1):-
+  % Filter.
   memberchk(element('PandVanMeting_postcode', _, [Postcode]), DOM1),
   sub_atom(Postcode, 0, _Length, _After, Prefix), !,
   
@@ -147,23 +160,9 @@ process_postcode_(G, Prefix, DOM1):-
   ),
   
   % DEB
-  (
-    debugging(energylabels_parse, true)
-  ->
-    flag(postcode_all, X, X + 1),
-    flag(postcode, Y, Y + 1),
-    (
-      X mod 10000 =:= 0
-    ->
-      debug(energylabels_parse, 'Processing entry #~w; scoped #~w.', [X,Y])
-    ;
-      true
-    )
-  ;
-    true
-  ).
-process_postcode_(_G, _Prefix, _DOM):-
-  flag(postcode_all, X, X + 1).
+  flag(postcode, Y, Y + 1).
+
+process_postcode_(_G, _Prefix, _DOM).
 
 trans('Afmeldnummer',                               el:afmeldnummer,                   integer).
 trans('Meting_geldig_tot',                          el:meting_geldig_tot,              date   ).

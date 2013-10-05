@@ -51,6 +51,7 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(generics(thread_ext)).
 :- use_module(library(archive)).
 :- use_module(library(debug)).
+:- use_module(library(filesex)).
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
 :- use_module(os(file_ext)).
@@ -69,37 +70,29 @@ script:-
   % This is needed for stage 4->5.
   set_prolog_stack(local, limit(2*10**9)),
   script_begin,
-  script_stage(0, copy_input),
-  script_stage(1, to_small_files),
-  script_stage(2, insert_newlines),
-  script_stage(3, to_big_file),
-  script_stage(4, energylabels_parse),
+  script_stage(0, copy_input,         'v20130401.dx.tar.gz', 'v20130401.dx' ),
+  script_stage(1, to_small_files,     'v20130401.dx',        'temp_0000'    ),
+  script_stage(2, insert_newlines,    _FromDir2,             'temp_0000.txt'),
+  script_stage(3, to_big_file,        _FromDir3,             'big.xml'      ),
+  script_stage(4, energylabels_parse, 'big.xml',             _ToDir4        ),
   script_end.
 
 % Stage 0 (Input) -> Stage 1
-copy_input(FromDir, ToDir):-
-  absolute_file_name(
-    'v20130401.dx.tar.gz',
-    FromFile,
-    [access(read),relative_to(FromDir)]
-  ),
+copy_input(FromFile, ToFile):-
+  directory_file_path(ToDir, _, ToFile),
   archive_extract(FromFile, ToDir, []).
 
 % Stage 1 -> Stage 2 (Split into smaller files).
-to_small_files(FromDir, ToDir):-
-  % Open the copied version of the big file with no newlines.
-  absolute_file_name(
-    v20130401,
-    FromFile,
-    [access(read),extensions([dx]),relative_to(FromDir)]
-  ),
+to_small_files(FromFile, ToFile):-
+  directory_file_path(ToDir, _, ToFile),
   split_into_smaller_files(FromFile, ToDir, temp_).
 
 % Stage 2 -> Stage 3 (Insert newlines in small files).
-insert_newlines(FromDir, ToDir):-
+insert_newlines(FromDir, ToFile):-
   % Add newlines to the small files.
   directory_file_path(FromDir, 'temp_*', RE),
   expand_file_name(RE, FromFiles),
+  directory_file_path(ToDir, _, ToFile),
   run_on_sublists(FromFiles, energylabels:insert_newlines_worker(ToDir)).
 
 % This predicate can only run in threads.
@@ -140,7 +133,6 @@ insert_newlines_worker(ToDir, FromFiles):-
   ).
 
 % Stage 3 -> Stage 4 (Put small files together into big one).
-to_big_file(FromDir, ToDir):-
-  create_file(ToDir, big, xml, ToFile),
+to_big_file(FromDir, ToFile):-
   merge_into_one_file(FromDir, ToFile).
 
