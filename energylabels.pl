@@ -39,35 +39,37 @@ The result is intended to be used within the Huiskluis project.
 
 @author Wouter Beek
 @see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
+@tbd insert_newlines/2 seems to use too much memory.
 @version 2013/04, 2013/06-2013/07, 2013/09-2013/10
 */
 
-:- use_module(energylabels(energylabels_parse)).
+:- use_module(energylabels(energylabels_parse)). % Used in script_stage/2.
 :- use_module(generics(codes_ext)).
 :- use_module(generics(db_ext)).
 :- use_module(generics(list_ext)).
-:- use_module(generics(script_stage)).
+:- use_module(generics(script_ext)).
 :- use_module(generics(thread_ext)).
 :- use_module(library(archive)).
 :- use_module(library(debug)).
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
-:- use_module(os(dir_ext)).
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
 
 :- db_add_novel(user:prolog_file_type(txt, text)).
 :- db_add_novel(user:prolog_file_type(xml, xml )).
 
-:- debug(energylabels).
+:- nodebug(energylabels).
 
 :- initialization(script).
 
 
 
 script:-
+  % This is needed for stage 4->5.
+  set_prolog_stack(local, limit(2*10**9)),
   script_begin,
-  script_stage(0, copy_input_archived),
+  script_stage(0, copy_input),
   script_stage(1, to_small_files),
   script_stage(2, insert_newlines),
   script_stage(3, to_big_file),
@@ -75,7 +77,7 @@ script:-
   script_end.
 
 % Stage 0 (Input) -> Stage 1
-copy_input_archived(FromDir, ToDir):-
+copy_input(FromDir, ToDir):-
   absolute_file_name(
     'v20130401.dx.tar.gz',
     FromFile,

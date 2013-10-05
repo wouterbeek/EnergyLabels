@@ -10,10 +10,8 @@
 
 Process all energylabels in a single parse.
 
-According to Wouter Beek there are 639.003 entries in the XML data.
-
 @author Wouter Beek
-@versionm 2013/06-2013/07, 2013/09
+@versionm 2013/06-2013/07, 2013/09-2013/10
 */
 
 :- use_module(dcg(dcg_date)).
@@ -41,34 +39,48 @@ According to Wouter Beek there are 639.003 entries in the XML data.
 
 
 %! energylabels_parse(+FromDirectory:atom, +ToDirectory:atom) is det.
+% Since the number of entries in the energylabels dataset is too big to
+% keep into memory, we are going to translate the XML to 10 separate RDF
+% graphs. We do this sequentially, cleaning out the RDF index in between
+% these 10 runs.
 
 energylabels_parse(FromDir, ToDir):-
-  % Open the input file on a read stream.
   absolute_file_name(
     big,
     FromFile,
     [access(read),file_type(xml),relative_to(FromDir)]
   ),
-  setting(energylabels_graph, G),
-  profile(xml_stream(FromFile, 'Pandcertificaat', process_postcode(G))),
-  absolute_file_name(
-    postcodes,
-    RDF_File,
-    [access(write),file_type(turtle),relative_to(ToDir)]
-  ),
-  rdf_save2(RDF_File, [format(turtle),graph(G)]).
+  rdf_unload_graph(el),
+  forall(
+    between(0, 9, N),
+    (
+      atom_number(Prefix, N),
+      xml_stream(FromFile, 'Pandcertificaat', process_postcode(el, Prefix)),
+      atomic_list_concat([el,Prefix], '_', ToFileName),
+      absolute_file_name(
+        ToFileName,
+        ToFile,
+        [access(write),file_type(turtle),relative_to(ToDir)]
+      ),
+      rdf_save2(ToFile, [format(turtle),graph(el)]),
+      rdf_unload_graph(el)
+    )
+  ).
 
-process_postcode(G, DOM0):-
+process_postcode(G, Prefix, DOM0):-
   Spec =.. ['Pandcertificaat',content],
   xpath_chk(DOM0, //Spec, DOM1),
   (
-    process_postcode_(G, DOM1), !
+    process_postcode_(G, Prefix, DOM1), !
   ;
     % DEB
-    gtrace, process_postcode_(G, DOM1)
+    gtrace, process_postcode_(G, Prefix, DOM1)
   ).
 
-process_postcode_(G, DOM1):-
+process_postcode_(G, Prefix, DOM1):-
+  memberchk(element('PandVanMeting_postcode', _, [Postcode]), DOM1),
+  sub_atom(Postcode, 0, _Length, _After, Prefix), !,
+  
   create_resource(
     DOM1,
     [
@@ -133,10 +145,25 @@ process_postcode_(G, DOM1):-
     G,
     []
   ),
-
+  
   % DEB
-  flag(postcode, Id, Id + 1),
-  debug(energylabels_parse, 'Processing entry #~w.', [Id]).
+  (
+    debugging(energylabels_parse, true)
+  ->
+    flag(postcode_all, X, X + 1),
+    flag(postcode, Y, Y + 1),
+    (
+      X mod 10000 =:= 0
+    ->
+      debug(energylabels_parse, 'Processing entry #~w; scoped #~w.', [X,Y])
+    ;
+      true
+    )
+  ;
+    true
+  ).
+process_postcode_(_G, _Prefix, _DOM):-
+  flag(postcode_all, X, X + 1).
 
 trans('Afmeldnummer',                               el:afmeldnummer,                   integer).
 trans('Meting_geldig_tot',                          el:meting_geldig_tot,              date   ).
