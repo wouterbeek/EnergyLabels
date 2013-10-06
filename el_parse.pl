@@ -1,8 +1,9 @@
 :- module(
-  energylabels_parse,
+  el_parse,
   [
-    energylabels_parse/2 % +FromFile:atom
-                         % +ToDirectory:atom
+    el_parse/3 % +ProcessStage:pair(atom,nonneg)
+               % +FromFile:atom
+               % +ToDirectory:atom
   ]
 ).
 
@@ -16,6 +17,7 @@ Process all energylabels in a single parse.
 
 :- use_module(dcg(dcg_date)).
 :- use_module(dcg(dcg_generic)).
+:- use_module(generics(script_ext)).
 :- use_module(library(debug)).
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).
@@ -34,23 +36,31 @@ Process all energylabels in a single parse.
 
 :- setting(energylabels_graph, atom, el, 'The name of the energylabels graph.').
 
-:- debug(energylabels_parse).
+:- debug(el_parse).
 
 
 
-%! energylabels_parse(+FromFile:atom, +ToDirectory:atom) is det.
+%! el_parse(
+%!   +ProcessStage:pair(atom,nonneg),
+%!   +FromFile:atom,
+%!   +ToDirectory:atom
+%! ) is det.
 % Since the number of entries in the energylabels dataset is too big to
 % keep into memory, we are going to translate the XML to 10 separate RDF
 % graphs. We do this sequentially, cleaning out the RDF index in between
 % these 10 runs.
 
-energylabels_parse(FromFile, ToDir):-
+el_parse(PS, FromFile, ToDir):-
   rdf_unload_graph(el),
   forall(
     between(1, 9, N),
     (
       atom_number(Prefix, N),
-      xml_stream(FromFile, 'Pandcertificaat', process_postcode(el, Prefix)),
+      xml_stream(
+        FromFile,
+        'Pandcertificaat',
+        process_postcode(PS, el, Prefix)
+      ),
       atomic_list_concat([el,Prefix], '_', ToFileName),
       absolute_file_name(
         ToFileName,
@@ -62,34 +72,12 @@ energylabels_parse(FromFile, ToDir):-
     )
   ).
 
-process_postcode(G, Prefix, DOM0):-
+process_postcode(PS, G, Prefix, DOM0):-
   Spec =.. ['Pandcertificaat',content],
   xpath_chk(DOM0, //Spec, DOM1),
-  (
-    process_postcode_(G, Prefix, DOM1), !,
-    
-    % DEB
-    (
-      debugging(energylabels_parse, true)
-    ->
-      flag(postcode_all, X, X + 1),
-      flag(postcode, Y, Y),
-      (
-        X mod 10000 =:= 0
-      ->
-        debug(energylabels_parse, 'Processing entry #~w; scoped #~w.', [X,Y])
-      ;
-        true
-      )
-    ;
-      true
-    )
-  ;
-    % DEB
-    gtrace, process_postcode_(G, Prefix, DOM1)
-  ).
+  process_postcode_(PS, G, Prefix, DOM1).
 
-process_postcode_(G, Prefix, DOM1):-
+process_postcode_(PS, G, Prefix, DOM1):-
   % Filter.
   memberchk(element('PandVanMeting_postcode', _, [Postcode]), DOM1),
   sub_atom(Postcode, 0, _Length, _After, Prefix), !,
@@ -160,9 +148,8 @@ process_postcode_(G, Prefix, DOM1):-
   ),
   
   % DEB
-  flag(postcode, Y, Y + 1).
-
-process_postcode_(_G, _Prefix, _DOM).
+  script_stage_tick(PS).
+process_postcode_(_PS, _G, _Prefix, _DOM).
 
 trans('Afmeldnummer',                               el:afmeldnummer,                   integer).
 trans('Meting_geldig_tot',                          el:meting_geldig_tot,              date   ).

@@ -3,12 +3,11 @@
 This code creates RDF representations of energy label data
 that is provided in an XML format which is difficult to process.
 
-The XML document was made available by the Dutch ministry:
-https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
-
 The code of the XML2RDF convesion is written in SWI-Prolog and requires
 modules from the Prolog Generics Collection (PGC)
 (see https://github.com/wouterbeek/PGC) in order to work.
+
+## Dataset conversion procedure
 
 The script assumes the input files are in subdirectory `Data/Input`
 and places the output files in a subdirectory called `Data/Output`
@@ -29,6 +28,12 @@ The translation is as follows:
 
 According to this conversion tool, the XML file contains
 2.354.560 measurements.
+
+## Origin of the data
+
+The XML document was made available by the Dutch ministry:
+  * https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
+  * ftp://ftp.ep-online.nl (login=`Apps4Holla`,password=`Apps4Holla_EPBD`)
 
 Wouter Beek
 me@wouterbeek.com

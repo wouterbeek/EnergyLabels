@@ -11,10 +11,10 @@ load_energylabels:-
   % to this from within the PGC (which does not 'know' that STCN is
   % using it).
   assert(user:file_search_path(project, ThisDirectory)),
-  assert(user:file_search_path(energylabels, ThisDirectory)),
+  assert(user:file_search_path(el, ThisDirectory)),
   
   % Load the PGC.
-  assert(user:file_search_path(pgc, energylabels('PGC'))),
+  assert(user:file_search_path(pgc, el('PGC'))),
   (
     predicate_property(debug_project, visible)
   ->
@@ -23,5 +23,5 @@ load_energylabels:-
     ensure_loaded(pgc(load))
   ),
   
-  ensure_loaded(energylabels(energylabels)).
+  ensure_loaded(el(el_script)).
 
