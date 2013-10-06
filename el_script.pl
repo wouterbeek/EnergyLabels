@@ -122,7 +122,7 @@ insert_newlines(_Id, FromDir, ToFile):-
   directory_file_path(FromDir, 'temp_*', RE),
   expand_file_name(RE, FromFiles),
   directory_file_path(ToDir, _, ToFile),
-  run_on_sublists(FromFiles, el:insert_newlines_worker(ToDir)).
+  run_on_sublists(FromFiles, insert_newlines_worker(ToDir)).
 
 % This predicate can only run in threads.
 % See module THREAD_EXT.
