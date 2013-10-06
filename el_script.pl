@@ -78,22 +78,16 @@ el_script:-
     [
       stage(
         [from_file('v20130401.dx.tar.gz'),to_file('v20130401.dx')],
-        Process,
         copy_input
       ),
-      stage(
-        [from_file('v20130401.dx'),to_file('temp_0000')],
-        Process,
-        to_small_files
-      ),
-      stage([to_file('temp_0000.txt')], Process, insert_newlines),
-      stage([to_file('big.xml')], Process, to_big_file),
+      stage([from_file('v20130401.dx'),to_file('temp_0000')], to_small_files),
+      stage([to_file('temp_0000.txt')], insert_newlines),
+      stage([to_file('big.xml')], to_big_file),
       stage(
         [from_file('big.xml'),potential(2354560),to_file('el_1.ttl')],
-        Process,
         el_parse
       ),
-      stage([], Process, assert_el_void)
+      stage([], assert_el_void)
     ]
   ).
 
