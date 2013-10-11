@@ -12,6 +12,8 @@ load_energylabels:-
   % using it).
   assert(user:file_search_path(project, ThisDirectory)),
   assert(user:file_search_path(el, ThisDirectory)),
+  assert(user:file_search_path(data, el('Data'))),
+  assert(user:file_search_path(output, data('Output'))),
   
   % Load the PGC.
   assert(user:file_search_path(pgc, el('PGC'))),
@@ -21,7 +23,5 @@ load_energylabels:-
     ensure_loaded(pgc(debug))
   ;
     ensure_loaded(pgc(load))
-  ),
-  
-  ensure_loaded(el(el_script)).
+  ).
 
