@@ -18,7 +18,7 @@ the LOD version of the dataset of energy labels.
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(semweb/rdfs)).
 :- use_module(library(settings)).
-:- use_module(rdf(rdf_lit)).
+:- use_module(rdf(rdf_lit_read)).
 :- use_module(rdf(rdf_read)).
 :- use_module(rdf(rdf_serial)).
 :- use_module(xml(xml_namespace)).
