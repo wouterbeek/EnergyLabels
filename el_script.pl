@@ -59,6 +59,7 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(os(io_ext)).
 :- use_module(rdf(rdf_serial)).
 
+:- db_add_novel(user:prolog_file_type(dx,  dx  )).
 :- db_add_novel(user:prolog_file_type(txt, text)).
 :- db_add_novel(user:prolog_file_type(xml, xml )).
 
@@ -73,32 +74,25 @@ el_script:-
   set_prolog_stack(local, limit(2*10**9)),
   Process = 'EnergyLabels',
   script(
-    [to_file('VoID.ttl')],
+    [to(output,'VoID',turtle)],
     Process,
     [
       stage(
-        [from_file('v20130401.dx.tar.gz'),to_file('v20130401.dx')],
+        [from(input,'v20130401.dx',archive),to(_,v20130401,dx)],
         copy_input
       ),
-      stage([from_file('v20130401.dx'),to_file('temp_0000')], to_small_files),
-      stage([to_file('temp_0000.txt')], insert_newlines),
-      stage([to_file('big.xml')], to_big_file),
-      stage(
-        [from_file('big.xml'),potential(2354560),to_file('el_1.ttl')],
-        el_parse
-      ),
-      stage([], assert_el_void)
+      stage([from(_,v20130401,dx)], to_small_files),
+      stage([], insert_newlines),
+      stage([to(_,big,xml)], to_big_file),
+      stage([from(_,big,xml),potential(2354560),to(_,el_1,turtle)], el_parse),
+      stage([to(output,'VoID',turtle)], assert_el_void)
     ]
   ).
 
-assert_el_void(_Id, FromDir, _ToDir):-
-  assert_el_void('VoID', FromDir),
-  absolute_file_name(
-    'VoID',
-    ToFile,
-    [access(write),file_type(turtle),relative_to(FromDir)]
-  ),
-  rdf_save2(ToFile, [format(turtle),graph('VoID')]).
+assert_el_void(_Id, FromDir, ToFile):-
+  G = 'VoID',
+  assert_el_void(G, FromDir),
+  rdf_save2(ToFile, [format(turtle),graph(G)]).
 
 % Stage 0 (Input) -> Stage 1
 copy_input(_Id, FromFile, ToFile):-
@@ -106,16 +100,14 @@ copy_input(_Id, FromFile, ToFile):-
   archive_extract(FromFile, ToDir, []).
 
 % Stage 1 -> Stage 2 (Split into smaller files).
-to_small_files(_Id, FromFile, ToFile):-
-  directory_file_path(ToDir, _, ToFile),
+to_small_files(_Id, FromFile, ToDir):-
   split_into_smaller_files(FromFile, ToDir, temp_).
 
 % Stage 2 -> Stage 3 (Insert newlines in small files).
-insert_newlines(_Id, FromDir, ToFile):-
+insert_newlines(_Id, FromDir, ToDir):-
   % Add newlines to the small files.
   directory_file_path(FromDir, 'temp_*', RE),
   expand_file_name(RE, FromFiles),
-  directory_file_path(ToDir, _, ToFile),
   run_on_sublists(FromFiles, insert_newlines_worker(ToDir)).
 
 % This predicate can only run in threads.
