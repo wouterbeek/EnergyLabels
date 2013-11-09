@@ -14,14 +14,20 @@ load_energylabels:-
   assert(user:file_search_path(el, ThisDirectory)),
   assert(user:file_search_path(data, el('Data'))),
   assert(user:file_search_path(output, data('Output'))),
-  
-  % Load the PGC.
-  assert(user:file_search_path(pgc, el('PGC'))),
-  (
-    predicate_property(debug_project, visible)
-  ->
-    ensure_loaded(pgc(debug))
-  ;
-    ensure_loaded(pgc(load))
-  ).
+  load_pgc(el).
+
+load_pgc(_Project):-
+  user:file_search_path(pgc, _Spec), !.
+load_pgc(Project):-
+  Spec =.. [Project,'PGC'],
+  assert(user:file_search_path(pgc, Spec)),
+  load_or_debug(pgc).
+
+load_or_debug(Project):-
+  predicate_property(debug_project, visible), !
+  Spec =.. [Project,debug],
+  ensure_loaded(Spec).
+load_or_debug(Project):-
+  Spec =.. [Project,load],
+  ensure_loaded(Spec).
 
