@@ -6,7 +6,7 @@ A simple application to showcase what can be done with
 the LOD version of the dataset of energy labels.
 
 @author Wouter Beek
-@version 2013/10
+@version 2013/10-2013/11
 */
 
 :- use_module(generics(meta_ext)).
@@ -18,12 +18,16 @@ the LOD version of the dataset of energy labels.
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(semweb/rdfs)).
 :- use_module(library(settings)).
+:- use_module(rdf(rdf_datatype)).
 :- use_module(rdf(rdf_lit_read)).
 :- use_module(rdf(rdf_read)).
 :- use_module(rdf(rdf_serial)).
+:- use_module(server(app_ui)).
 :- use_module(xml(xml_namespace)).
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
+
+:- http_handler(root(el), el, []).
 
 :- setting(
   port,
@@ -32,9 +36,7 @@ the LOD version of the dataset of energy labels.
   'The default port at which to start the server.'
 ).
 
-:- http_handler(root(.), index, [prefix]).
-
-:- initialization(start_el_app).
+:- initialization(load_el_data).
 
 
 
@@ -53,10 +55,10 @@ gas_order(PostcodePrefix, GasOrder):-
     GasOrder
   ).
 
-index(_Request):-
-  reply_html_page(el, [], []).
+el(_Request):-
+  reply_html_page(app_style, \el_head, \el_body).
 
-user:body(el, Body) -->
+el_body -->
   {
     gas_order('1094', GasOrder),
     pairs_values(GasOrder, List),
@@ -66,27 +68,23 @@ user:body(el, Body) -->
       HTML_Table
     )
   },
-  html(body([HTML_Table|Body])).
+  html(body(HTML_Table)).
 
-user:head(el, Head) -->
-  html(head([title('Energy Labels Demo App')|Head])).
+el_head -->
+  html(head(title('Energy Labels Demo App'))).
 
+% Already loaded in memory.
 load_el_data:-
   rdf_graph(el), !.
+% Already available on disk.
 load_el_data:-
-  absolute_file_name(output(el_1), File, [access(read),file_type(turtle)]),
+  absolute_file_name(
+    output(el_1),
+    File,
+    [access(read),file_errors(fail),file_type(turtle)]
+  ), !,
   rdf_load2(File, [format(turtle),graph(el)]).
-
-start_el_app:-
-  load_el_data,
-  start_el_server.
-
-start_el_server:-
-  setting(port, Port),
-  http_server_property(Port, start_time(_Time)), !.
-start_el_server:-
-  setting(port, Port),
-  % Make sure Wallace is shut down whenever Prolog shuts down.
-  assert(user:at_halt(http_stop_server(Port, []))),
-  http_server(http_dispatch, [port(Port)]).
+% Has to be created.
+load_el_data:-
+  use_module(el(el_script)).
 
