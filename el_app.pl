@@ -23,9 +23,12 @@ the LOD version of the dataset of energy labels.
 :- use_module(rdf(rdf_read)).
 :- use_module(rdf(rdf_serial)).
 :- use_module(server(app_ui)).
+:- use_module(sparql(sparql_ext)).
 :- use_module(xml(xml_namespace)).
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
+:- register_sparql_prefix(el).
+:- register_sparql_remote(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
 
 :- http_handler(root(el), el, []).
 
@@ -72,6 +75,22 @@ el_body -->
 
 el_head -->
   html(head(title('Energy Labels Demo App'))).
+
+el_index(PostcodePrefix, Resources):-
+  Where1 = '?building a el:Building .',
+  Where2 = '?building el:postcode ?postcode .',
+  format(atom(Where3), 'filter regex(?postcode, "^~w") .', [PostcodePrefix]),
+  Where4 = '?building el:certificaat ?certificaat .',
+  Where5 = '?certificaat el:energie_prestatieindex ?index .',
+  formulate_sparql(
+    default_graph('http://example.com/el'),
+    [el],
+    select([distinct(true)],[building,index]),
+    [Where1,Where2,Where3,Where4,Where5],
+    order_by([order(asc)],[index]),
+    Query
+  ),
+  enqueue_sparql(el, Query, _VarNames, Resources).
 
 % Already loaded in memory.
 load_el_data:-
