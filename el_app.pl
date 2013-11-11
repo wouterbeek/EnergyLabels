@@ -9,20 +9,19 @@ the LOD version of the dataset of energy labels.
 @version 2013/10-2013/11
 */
 
-:- use_module(generics(meta_ext)).
+:- use_module(html(html_form)).
 :- use_module(html(html_table)).
 :- use_module(library(http/html_write)).
 :- use_module(library(http/http_dispatch)).
-:- use_module(library(http/thread_httpd)).
-:- use_module(library(pairs)).
+:- use_module(library(http/http_parameters)).
+:- use_module(library(http/http_path)).
+:- use_module(library(lists)).
 :- use_module(library(semweb/rdf_db)).
-:- use_module(library(semweb/rdfs)).
 :- use_module(library(settings)).
-:- use_module(rdf(rdf_datatype)).
-:- use_module(rdf(rdf_lit_read)).
-:- use_module(rdf(rdf_read)).
+:- use_module(rdf(rdf_name)).
 :- use_module(rdf(rdf_serial)).
 :- use_module(server(app_ui)).
+:- use_module(server(web_modules)).
 :- use_module(sparql(sparql_ext)).
 :- use_module(xml(xml_namespace)).
 
@@ -39,44 +38,107 @@ the LOD version of the dataset of energy labels.
   'The default port at which to start the server.'
 ).
 
-:- initialization(load_el_data).
+:- initialization(web_module_add('EnergyLabels', el_app, el)).
 
 
 
-gas_order(PostcodePrefix, GasOrder):-
-  atom_length(PostcodePrefix, PostcodePrefixLength),
-  setoff(
-    Gas-[Postcode,HouseNumber,Gas],
-    (
-      rdfs_individual_of(Building, el:'Building'),
-      rdf_literal(Building, el:postcode, Postcode, el),
-      sub_atom(Postcode, 0, PostcodePrefixLength, _After, PostcodePrefix),
-      rdf(Building, el:certificaat, Certificate, el),
-      rdf_datatype(Certificate, el:energie_verbruik_gas, decimal, Gas, el),
-      rdf_datatype(Building, el:huisnummer, integer, HouseNumber, el)
-    ),
-    GasOrder
+el(Request):-
+  http_parameters(
+    Request,
+    [
+      house_number(HouseNumber, [default(no_house_number)]),
+      house_number_addition(
+        HouseNumberAddition,
+        [default(no_house_number_addition)]
+      ),
+      postcode(Postcode, [default(no_postcode)])
+    ]
+  ),
+  reply_html_page(
+    app_style,
+    \el_head,
+    \el_body(Postcode, HouseNumber, HouseNumberAddition)
   ).
 
-el(_Request):-
-  reply_html_page(app_style, \el_head, \el_body).
+el_body(Postcode, HouseNumber, HouseNumberAddition) -->
+  {http_absolute_location(root(el), URL, [])},
+  html([
+    \submission_form(
+      URL,
+      [
+        input([name=postcode,placeholder='Postcode',type=text]),
+        input([name=house_number,placeholder='House number',type=text]),
+        input([name=house_number_addition,placeholder='House number addition',type=text]),
+        \submit_button
+      ]
+    ),
+    \el_content(Postcode, HouseNumber, HouseNumberAddition)
+  ]).
 
-el_body -->
+el_content(Postcode, HouseNumber, HouseNumberAddition) -->
+  {(
+    Postcode == no_postcode
+  ;
+    HouseNumber == no_house_number
+  ;
+    HouseNumberAddition == no_house_number_addition
+  )}, !.
+el_content(Postcode, HouseNumber, HouseNumberAddition) -->
   {
-    gas_order('1094', GasOrder),
-    pairs_values(GasOrder, List),
-    html_table(
-      [caption('Energy comparison'),header(true),indexed(true)],
-      [['Postcode','Huisnummer','Gasverbruik']|List],
-      HTML_Table
-    )
+    el_index(Postcode, HouseNumber, HouseNumberAddition, L),
+    el_indexes(Postcode, Ls),
+gtrace,
+    nth0(I, Ls, L)
   },
-  html(body(HTML_Table)).
+  html(
+    \html_table(
+      [
+        caption('SPARQL results'),
+        header(true),
+        highlighted_rows([I]),
+        indexed(true)
+      ],
+      [['Building','Prestation index']|Ls]
+    )
+  ).
+
+%  {
+%    gas_order('1094', GasOrder),
+%    html_table(
+%      [caption('Energy comparison'),header(true),indexed(true)],
+%      [['Postcode','Huisnummer','Gasverbruik']|List],
+%      HTML_Table
+%    )
+%  },
+%  html(body(HTML_Table)).
 
 el_head -->
-  html(head(title('Energy Labels Demo App'))).
+  html(title('Energy Labels Demo App')).
 
-el_index(PostcodePrefix, Resources):-
+el_index(Postcode, HouseNumber, HouseNumberAddition, L):-
+  Where1 = '?building a el:Building .',
+  Where2 = '?building el:postcode ?postcode .',
+  format(atom(Where3), 'filter regex(?postcode, "^~w") .', [Postcode]),
+  format(atom(Where4), '?building el:huisnummer ~w .', [HouseNumber]),
+  format(
+    atom(Where5),
+    '?building el:huisnummer_toevoeging "-~w" .',
+    [HouseNumberAddition]
+  ),
+  Where6 = '?building el:certificaat ?certificaat .',
+  Where7 = '?certificaat el:energie_prestatieindex ?index .',
+  formulate_sparql(
+    default_graph('http://example.com/el'),
+    [el],
+    select([distinct(true)],[building,index]),
+    [Where1,Where2,Where3,Where4,Where5,Where6,Where7],
+    _Extra,
+    Query
+  ),
+  enqueue_sparql(el, Query, _VarNames, [Row]),
+  Row =.. [row|L].
+
+el_indexes(PostcodePrefix, Ls):-
   Where1 = '?building a el:Building .',
   Where2 = '?building el:postcode ?postcode .',
   format(atom(Where3), 'filter regex(?postcode, "^~w") .', [PostcodePrefix]),
@@ -90,7 +152,8 @@ el_index(PostcodePrefix, Resources):-
     order_by([order(asc)],[index]),
     Query
   ),
-  enqueue_sparql(el, Query, _VarNames, Resources).
+  enqueue_sparql(el, Query, _VarNames, Rows),
+  sparql_rows_to_lists(Rows, Ls).
 
 % Already loaded in memory.
 load_el_data:-
