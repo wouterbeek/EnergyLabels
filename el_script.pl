@@ -150,3 +150,4 @@ insert_newlines_worker(ToDir, FromFiles):-
 % Stage 3 -> Stage 4 (Put small files together into big one).
 to_big_file(Id, FromDir, ToFile):-
   merge_into_one_file(Id, FromDir, ToFile).
+
