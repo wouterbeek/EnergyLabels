@@ -1,8 +1,8 @@
 % The run file for the EnergyLabels project.
 
-:- initialization(run_energylabels).
+:- initialization(run_el).
 
-run_energylabels:-
+run_el:-
   % Entry point.
   source_file(run_energylabels, ThisFile),
   file_directory_name(ThisFile, ThisDir),
@@ -12,8 +12,7 @@ run_energylabels:-
   load_pgc(project),
   
   % EnergyLabels
-  ensure_loaded(load),
-  load_energylabels(ThisDir).
+  ensure_loaded(load).
 
 load_pgc(_Project):-
   user:file_search_path(pgc, _Spec), !.

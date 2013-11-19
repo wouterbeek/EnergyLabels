@@ -3,8 +3,15 @@
 :- multifile(user:project_name/1).
 user:project_name('EnergyLabels').
 
-load_energylabels(Dir):-
-  assert(user:file_search_path(el, Dir)),
+:- initialization(load_el).
+
+load_el:-
+  % Entry point.
+  source_file(load_el, ThisFile),
+  file_directory_name(ThisFile, ThisDir),
+
+  % EnergyLabels
+  assert(user:file_search_path(el, ThisDir)),
   assert(user:file_search_path(data, el('Data'))),
   assert(user:file_search_path(output, data('Output'))),
   use_module(el(el_app)).
