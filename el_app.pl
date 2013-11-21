@@ -55,13 +55,6 @@ the LOD version of the dataset of energy labels.
 
 :- http_handler(root(el), el, []).
 
-:- setting(
-  port,
-  integer,
-  5000,
-  'The default port at which to start the server.'
-).
-
 :- initialization(web_module_add('EnergyLabels', el_app, el)).
 
 
