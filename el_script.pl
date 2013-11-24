@@ -50,6 +50,7 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(generics(list_ext)).
 :- use_module(generics(script_ext)).
 :- use_module(generics(thread_ext)).
+:- use_module(library(apply)).
 :- use_module(library(archive)).
 :- use_module(library(debug)).
 :- use_module(library(filesex)).
@@ -58,6 +59,9 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
 :- use_module(rdf(rdf_serial)).
+:- use_module(xml(xml_namespace)).
+
+:- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
 
 :- db_add_novel(user:prolog_file_type(dx,  dx  )).
 :- db_add_novel(user:prolog_file_type(txt, text)).
@@ -84,7 +88,8 @@ el_script:-
       stage([from(_,v20130401,dx)], to_small_files),
       stage([], insert_newlines),
       stage([to(_,big,xml)], merge_into_one_file),
-      stage([from(_,big,xml),potential(2354560),to(_,el_1,turtle)], el_parse),
+      stage([from(_,big,xml),potential(2354560)], el_parse),
+      stage([], el_clean),
       stage([to(output,'VoID',turtle)], assert_el_void)
     ]
   ).
@@ -146,4 +151,38 @@ insert_newlines_worker(ToDir, FromFiles):-
       )
     )
   ).
+
+el_clean(_Id, FromDir, ToDir):-
+  % Do this for every Turtle file in the from directory.
+  directory_files(
+    [
+      file_types([turtle]),
+      include_directories(false),
+      order(lexicographic),
+      recursive(false)
+    ],
+    FromDir,
+    FromFiles
+  ),
+  maplist(el_clean(ToDir), FromFiles).
+
+el_clean(ToDir, FromFile):-
+  % Load and unload RDF.
+  setup_call_cleanup(
+    rdf_load2(FromFile, [format(turtle),graph(el)]),
+    el_clean_(ToDir, FromFile),
+    rdf_unload_graph(el)
+  ).
+
+el_clean_(ToDir, FromFile):-
+  rdf_strip_literal([], ['-'], _S, el:huisnummer_toevoeging, el),
+  
+  % Store the results.
+  file_name(FromFile, _FromDir, FileName, _FileExt),
+  absolute_file_name(
+    FileName,
+    ToFile,
+    [access(write),file_type(turtle),relative_to(ToDir)]
+  ),
+  rdf_save2(ToFile, [format(turtle),graph(el)]).
 
