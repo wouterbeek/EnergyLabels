@@ -11,7 +11,7 @@
 Asserts the VoID description of the energy labels dataset.
 
 @author Wouter Beek
-@version 2013/10
+@version 2013/10-2013/11
 */
 
 :- use_module(library(filesex)).
@@ -21,6 +21,7 @@ Asserts the VoID description of the energy labels dataset.
 :- use_module(rdf(rdf_datatype)).
 :- use_module(rdf(rdf_lit_build)).
 :- use_module(rdfs(rdfs_label_build)).
+:- use_module(void(void_stat)).
 :- use_module(xml(xml_namespace)).
 
 :- xml_register_namespace(dbpedia, 'http://dbpedia.org/resource/').
@@ -127,7 +128,7 @@ assert_el_void(G, Dir):-
   % void:subset
   forall(
     between(1, 9, N),
-    assert_el_void_ds(G, DD, N, Dir)
+    assert_el_void_dataset(G, DD, N, Dir)
   ),
 
   % void:uriLookupEndpoint
@@ -155,7 +156,7 @@ assert_el_void(G, Dir):-
 
   true.
 
-assert_el_void_ds(G, DD, N, Dir):-
+assert_el_void_dataset(G, DD, N, Dir):-
   format(atom(DS_Name), 'el_~w', [N]),
   rdf_global_id(el:DS_Name, DS),
 
@@ -183,8 +184,8 @@ assert_el_void_ds(G, DD, N, Dir):-
 
   % void:subset
   rdf_assert(DD, void:subset, DS, G),
-
-  true.
+gtrace,
+  void_assert_statistics(G, DS, DS_File).
 
 assert_energylabels_original_dataset(G, ODS):-
   rdf_global_id(el:'OriginalDataset', ODS),
