@@ -73,7 +73,6 @@ el_script:-
   % This is needed for stage 4->5.
   set_prolog_stack(local, limit(2*10**9)),
   Process = 'EnergyLabels',
-gtrace,
   script(
     [to(output,'VoID',turtle)],
     Process,
@@ -84,7 +83,7 @@ gtrace,
       ),
       stage([from(_,v20130401,dx)], to_small_files),
       stage([], insert_newlines),
-      stage([to(_,big,xml)], to_big_file),
+      stage([to(_,big,xml)], merge_into_one_file),
       stage([from(_,big,xml),potential(2354560),to(_,el_1,turtle)], el_parse),
       stage([to(output,'VoID',turtle)], assert_el_void)
     ]
@@ -147,8 +146,4 @@ insert_newlines_worker(ToDir, FromFiles):-
       )
     )
   ).
-
-% Stage 3 -> Stage 4 (Put small files together into big one).
-to_big_file(Id, FromDir, ToFile):-
-  merge_into_one_file(Id, FromDir, ToFile).
 

@@ -3,7 +3,6 @@
 :- initialization(run_el).
 
 run_el:-
-gtrace,
   % Entry point.
   source_file(run_el, ThisFile),
   file_directory_name(ThisFile, ThisDir),

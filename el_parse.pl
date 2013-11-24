@@ -46,9 +46,9 @@ Process all energylabels in a single parse.
 %!   +ToDirectory:atom
 %! ) is det.
 % Since the number of entries in the energylabels dataset is too big to
-% keep into memory, we are going to translate the XML to 10 separate RDF
-% graphs. We do this sequentially, cleaning out the RDF index in between
-% these 10 runs.
+% keep into memory, we are going to translate the XML into 10 separate
+% RDF graphs. We do this sequentially, cleaning out the internal RDF index
+% in between these 10 runs.
 
 el_parse(PS, FromFile, ToDir):-
   rdf_unload_graph(el),
