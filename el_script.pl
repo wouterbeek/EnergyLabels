@@ -77,10 +77,9 @@ The result is intended to be used within the Huiskluis project.
 el_script:-
   % This is needed for stage 4->5.
   set_prolog_stack(local, limit(2*10**9)),
-  Process = 'EnergyLabels',
   script(
     [to(output,'VoID',turtle)],
-    Process,
+    el,
     [
       stage(
         [from(input,'v20130401.dx',archive),to(_,v20130401,dx)],
