@@ -43,12 +43,12 @@ The result is intended to be used within the Huiskluis project.
 @version 2013/04, 2013/06-2013/07, 2013/09-2013/11
 */
 
-:- use_module(el(el_parse)). % Used in script_stage/2.
+:- use_module(ap(ap)).
+:- use_module(el(el_parse)). % Used in ap_stage/2.
 :- use_module(el(el_void)).
 :- use_module(generics(codes_ext)).
 :- use_module(generics(db_ext)).
 :- use_module(generics(list_ext)).
-:- use_module(generics(script_ext)).
 :- use_module(generics(thread_ext)).
 :- use_module(library(apply)).
 :- use_module(library(archive)).
@@ -79,20 +79,20 @@ The result is intended to be used within the Huiskluis project.
 el_script:-
   % This is needed for stage 4->5.
   set_prolog_stack(local, limit(2*10**9)),
-  script(
-    [to(output,'VoID',turtle)],
-    el,
+gtrace,
+  ap(
+    [process(xml2rdf),project(el),to('VoID',turtle)],
     [
-      stage(
+      ap_stage(
         [from(el_input,'v20130401.dx',archive),to(_,v20130401,dx)],
         copy_input
       ),
-      stage([from(_,v20130401,dx)], to_small_files),
-      stage([], insert_newlines),
-      stage([to(_,big,xml)], merge_into_one_file),
-      stage([from(_,big,xml),potential(2354560)], el_parse),
-      stage([], el_clean),
-      stage([to(el_output,'VoID',turtle)], assert_el_void)
+      ap_stage([from(_,v20130401,dx)], to_small_files),
+      ap_stage([], insert_newlines),
+      ap_stage([to(_,big,xml)], merge_into_one_file),
+      ap_stage([from(_,big,xml),potential(2354560)], el_parse),
+      ap_stage([], el_clean),
+      ap_stage([to(el_output,'VoID',turtle)], assert_el_void)
     ]
   ).
 

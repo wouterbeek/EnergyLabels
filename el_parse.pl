@@ -12,12 +12,12 @@
 Process all energylabels in a single parse.
 
 @author Wouter Beek
-@versionm 2013/06-2013/07, 2013/09-2013/10
+@version 2013/06-2013/07, 2013/09-2013/11
 */
 
+:- use_module(ap(ap_stat)).
 :- use_module(dcg(dcg_date)).
 :- use_module(dcg(dcg_generic)).
-:- use_module(generics(script_ext)).
 :- use_module(library(debug)).
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).
@@ -148,7 +148,7 @@ process_postcode_(PS, G, Prefix, DOM1):-
   ),
   
   % DEB
-  script_stage_tick(PS).
+  ap_stage_tick(PS).
 process_postcode_(_PS, _G, _Prefix, _DOM).
 
 trans('Afmeldnummer',                               el:afmeldnummer,                   integer).
