@@ -40,7 +40,7 @@ The result is intended to be used within the Huiskluis project.
 @author Wouter Beek
 @see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
 @tbd insert_newlines/2 seems to use too much memory.
-@version 2013/04, 2013/06-2013/07, 2013/09-2013/10
+@version 2013/04, 2013/06-2013/07, 2013/09-2013/11
 */
 
 :- use_module(el(el_parse)). % Used in script_stage/2.
@@ -56,6 +56,8 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(library(filesex)).
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
+:- use_module(library(semweb/rdf_db)).
+:- use_module(os(dir_ext)).
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
 :- use_module(rdf(rdf_clean)).
@@ -82,7 +84,7 @@ el_script:-
     el,
     [
       stage(
-        [from(input,'v20130401.dx',archive),to(_,v20130401,dx)],
+        [from(el_input,'v20130401.dx',archive),to(_,v20130401,dx)],
         copy_input
       ),
       stage([from(_,v20130401,dx)], to_small_files),
@@ -90,7 +92,7 @@ el_script:-
       stage([to(_,big,xml)], merge_into_one_file),
       stage([from(_,big,xml),potential(2354560)], el_parse),
       stage([], el_clean),
-      stage([to(output,'VoID',turtle)], assert_el_void)
+      stage([to(el_output,'VoID',turtle)], assert_el_void)
     ]
   ).
 
