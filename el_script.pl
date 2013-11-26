@@ -44,6 +44,7 @@ The result is intended to be used within the Huiskluis project.
 */
 
 :- use_module(ap(ap)).
+:- use_module(ap(ap_act)).
 :- use_module(el(el_parse)). % Used in ap_stage/2.
 :- use_module(el(el_void)).
 :- use_module(generics(codes_ext)).
@@ -66,6 +67,7 @@ The result is intended to be used within the Huiskluis project.
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
 
+:- db_add_novel(user:prolog_file_type('tar.gz', archive)).
 :- db_add_novel(user:prolog_file_type(dx,  dx  )).
 :- db_add_novel(user:prolog_file_type(txt, text)).
 :- db_add_novel(user:prolog_file_type(xml, xml )).
@@ -78,21 +80,20 @@ The result is intended to be used within the Huiskluis project.
 
 el_script:-
   % This is needed for stage 4->5.
-  set_prolog_stack(local, limit(2*10**9)),
-gtrace,
+  %set_prolog_stack(local, limit(2*10**9)),
   ap(
     [process(xml2rdf),project(el),to('VoID',turtle)],
     [
       ap_stage(
-        [from(el_input,'v20130401.dx',archive),to(_,v20130401,dx)],
-        copy_input
+        [from(input,'v20130401.dx',archive),to(_,v20130401,dx)],
+        ap_extract_archive
       ),
       ap_stage([from(_,v20130401,dx)], to_small_files),
       ap_stage([], insert_newlines),
-      ap_stage([to(_,big,xml)], merge_into_one_file),
+      ap_stage([to(_,big,xml)], ap_merge_into_one_file),
       ap_stage([from(_,big,xml),potential(2354560)], el_parse),
       ap_stage([], el_clean),
-      ap_stage([to(el_output,'VoID',turtle)], assert_el_void)
+      ap_stage([to(output,'VoID',turtle)], assert_el_void)
     ]
   ).
 
@@ -101,16 +102,11 @@ assert_el_void(_Id, FromDir, ToFile):-
   assert_el_void(G, FromDir),
   rdf_save2(ToFile, [format(turtle),graph(G)]).
 
-% Stage 0 (Input) -> Stage 1
-copy_input(_Id, FromFile, ToFile):-
-  directory_file_path(ToDir, _, ToFile),
-  archive_extract(FromFile, ToDir, []).
-
-% Stage 1 -> Stage 2 (Split into smaller files).
+% Split into smaller files.
 to_small_files(_Id, FromFile, ToDir):-
   split_into_smaller_files(FromFile, ToDir, temp_).
 
-% Stage 2 -> Stage 3 (Insert newlines in small files).
+% Insert newlines in small files.
 insert_newlines(_Id, FromDir, ToDir):-
   % Add newlines to the small files.
   directory_file_path(FromDir, 'temp_*', RE),
