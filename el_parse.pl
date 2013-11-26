@@ -1,7 +1,7 @@
 :- module(
   el_parse,
   [
-    el_parse/3 % +ProcessStage:pair(atom,nonneg)
+    el_parse/3 % +StageAlias:atom
                % +FromFile:atom
                % +ToDirectory:atom
   ]
@@ -18,7 +18,6 @@ Process all energylabels in a single parse.
 :- use_module(ap(ap_stat)).
 :- use_module(dcg(dcg_date)).
 :- use_module(dcg(dcg_generic)).
-:- use_module(library(debug)).
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).
 :- use_module(library(xpath)).
@@ -36,12 +35,10 @@ Process all energylabels in a single parse.
 
 :- setting(energylabels_graph, atom, el, 'The name of the energylabels graph.').
 
-:- debug(el_parse).
-
 
 
 %! el_parse(
-%!   +ProcessStage:pair(atom,nonneg),
+%!   +StageAlias:atom,
 %!   +FromFile:atom,
 %!   +ToDirectory:atom
 %! ) is det.
@@ -50,7 +47,7 @@ Process all energylabels in a single parse.
 % RDF graphs. We do this sequentially, cleaning out the internal RDF index
 % in between these 10 runs.
 
-el_parse(PS, FromFile, ToDir):-
+el_parse(StageAlias, FromFile, ToDir):-
   rdf_unload_graph(el),
   forall(
     between(1, 9, N),
@@ -59,7 +56,7 @@ el_parse(PS, FromFile, ToDir):-
       xml_stream(
         FromFile,
         'Pandcertificaat',
-        process_postcode(PS, el, Prefix)
+        process_postcode(StageAlias, el, Prefix)
       ),
       atomic_list_concat([el,Prefix], '_', ToFileName),
       absolute_file_name(
@@ -72,12 +69,12 @@ el_parse(PS, FromFile, ToDir):-
     )
   ).
 
-process_postcode(PS, G, Prefix, DOM0):-
+process_postcode(StageAlias, G, Prefix, DOM0):-
   Spec =.. ['Pandcertificaat',content],
   xpath_chk(DOM0, //Spec, DOM1),
-  process_postcode_(PS, G, Prefix, DOM1).
+  process_postcode_(StageAlias, G, Prefix, DOM1).
 
-process_postcode_(PS, G, Prefix, DOM1):-
+process_postcode_(StageAlias, G, Prefix, DOM1):-
   % Filter.
   memberchk(element('PandVanMeting_postcode', _, [Postcode]), DOM1),
   sub_atom(Postcode, 0, _Length, _After, Prefix), !,
@@ -148,7 +145,7 @@ process_postcode_(PS, G, Prefix, DOM1):-
   ),
   
   % DEB
-  ap_stage_tick(PS).
+  ap_stage_tick(StageAlias).
 process_postcode_(_PS, _G, _Prefix, _DOM).
 
 trans('Afmeldnummer',                               el:afmeldnummer,                   integer).

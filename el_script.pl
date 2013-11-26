@@ -91,7 +91,7 @@ el_script:-
       ap_stage([from(_,v20130401,dx)], to_small_files),
       ap_stage([], insert_newlines),
       ap_stage([to(_,big,xml)], ap_merge_into_one_file),
-      ap_stage([from(_,big,xml),potential(2354560)], el_parse),
+      ap_stage([from(_,big,xml),potential(2354560),stat_lag(100)], el_parse),
       ap_stage([], el_clean),
       ap_stage([to(output,'VoID',turtle)], assert_el_void)
     ]
