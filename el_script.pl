@@ -97,17 +97,17 @@ el_script:-
     ]
   ).
 
-assert_el_void(_Id, FromDir, ToFile):-
+assert_el_void(_StageAlias, FromDir, ToFile):-
   G = 'VoID',
   assert_el_void(G, FromDir),
   rdf_save2(ToFile, [format(turtle),graph(G)]).
 
 % Split into smaller files.
-to_small_files(_Id, FromFile, ToDir):-
+to_small_files(_StageAlias, FromFile, ToDir):-
   split_into_smaller_files(FromFile, ToDir, temp_).
 
 % Insert newlines in small files.
-insert_newlines(_Id, FromDir, ToDir):-
+insert_newlines(_StageAlias, FromDir, ToDir):-
   % Add newlines to the small files.
   directory_file_path(FromDir, 'temp_*', RE),
   expand_file_name(RE, FromFiles),
@@ -150,8 +150,10 @@ insert_newlines_worker(ToDir, FromFiles):-
     )
   ).
 
-el_clean(_Id, FromDir, ToDir):-
+el_clean(StageAlias, FromDir, ToDir):-
+gtrace,
   % Do this for every Turtle file in the from directory.
+  % (Due to memory limitations.)
   directory_files(
     [
       file_types([turtle]),
@@ -162,25 +164,14 @@ el_clean(_Id, FromDir, ToDir):-
     FromDir,
     FromFiles
   ),
-  maplist(el_clean(ToDir), FromFiles).
+  maplist(el_clean(StageAlias, ToDir), FromFiles).
 
-el_clean(ToDir, FromFile):-
+el_clean(StageAlias, ToDir, FromFile):-
+  file_directory_alternative(FromFile, ToDir, ToFile),
   % Load and unload RDF.
-  setup_call_cleanup(
-    rdf_load2(FromFile, [format(turtle),graph(el)]),
-    el_clean_(ToDir, FromFile),
-    rdf_unload_graph(el)
+  rdf_setup_call_cleanup(
+    [to(ToFile)],
+    rdf_strip_literal([], ['-'], _S, el:huisnummer_toevoeging),
+    [FromFile]
   ).
-
-el_clean_(ToDir, FromFile):-
-  rdf_strip_literal([], ['-'], _S, el:huisnummer_toevoeging, el),
-  
-  % Store the results.
-  file_name(FromFile, _FromDir, FileName, _FileExt),
-  absolute_file_name(
-    FileName,
-    ToFile,
-    [access(write),file_type(turtle),relative_to(ToDir)]
-  ),
-  rdf_save2(ToFile, [format(turtle),graph(el)]).
 
