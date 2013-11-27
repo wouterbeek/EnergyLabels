@@ -44,7 +44,7 @@ The result is intended to be used within the Huiskluis project.
 */
 
 :- use_module(ap(ap)).
-:- use_module(ap(ap_act)).
+:- use_module(ap(ap_act)). % Used in ap_stage/2.
 :- use_module(el(el_parse)). % Used in ap_stage/2.
 :- use_module(el(el_void)).
 :- use_module(generics(codes_ext)).
@@ -52,15 +52,14 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(generics(list_ext)).
 :- use_module(generics(thread_ext)).
 :- use_module(library(apply)).
-:- use_module(library(archive)).
 :- use_module(library(debug)).
 :- use_module(library(filesex)).
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
-:- use_module(library(semweb/rdf_db)).
 :- use_module(os(dir_ext)).
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
+:- use_module(rdf(rdf_ap)).
 :- use_module(rdf(rdf_clean)).
 :- use_module(rdf(rdf_serial)).
 :- use_module(xml(xml_namespace)).
@@ -171,7 +170,12 @@ el_clean(StageAlias, ToDir, FromFile):-
   % Load and unload RDF.
   rdf_setup_call_cleanup(
     [to(ToFile)],
-    rdf_strip_literal([], ['-'], _S, el:huisnummer_toevoeging),
+    rdf_strip_literal(
+      [answer('A'),stat_flag(StageAlias)],
+      ['-'],
+      _S,
+      el:huisnummer_toevoeging
+    ),
     [FromFile]
   ).
 
