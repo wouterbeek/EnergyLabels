@@ -45,6 +45,7 @@ The result is intended to be used within the Huiskluis project.
 
 :- use_module(ap(ap)).
 :- use_module(ap(ap_act)). % Used in ap_stage/2.
+:- use_module(ap(ap_stat)).
 :- use_module(el(el_parse)). % Used in ap_stage/2.
 :- use_module(el(el_void)).
 :- use_module(generics(codes_ext)).
@@ -56,6 +57,7 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(library(filesex)).
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
+:- use_module(library(semweb/rdf_db)).
 :- use_module(os(dir_ext)).
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
@@ -150,7 +152,6 @@ insert_newlines_worker(ToDir, FromFiles):-
   ).
 
 el_clean(StageAlias, FromDir, ToDir):-
-gtrace,
   % Do this for every Turtle file in the from directory.
   % (Due to memory limitations.)
   directory_files(
@@ -163,19 +164,24 @@ gtrace,
     FromDir,
     FromFiles
   ),
-  maplist(el_clean(StageAlias, ToDir), FromFiles).
+  length(FromFiles, Potential),
+  ap_stage_init(StageAlias, Potential),
+  maplist(el_clean_(StageAlias, ToDir), FromFiles).
 
-el_clean(StageAlias, ToDir, FromFile):-
+el_clean_(StageAlias, ToDir, FromFile):-
   file_directory_alternative(FromFile, ToDir, ToFile),
+  rdf_equal(el:huisnummer_toevoeging, P),
   % Load and unload RDF.
   rdf_setup_call_cleanup(
     [to(ToFile)],
     rdf_strip_literal(
-      [answer('A'),stat_flag(StageAlias)],
+      [answer('A')],
       ['-'],
       _S,
-      el:huisnummer_toevoeging
+      P
     ),
     [FromFile]
-  ).
+  ),
+  ap_stage_tick(StageAlias),
+  forall(rdf_graph(G), format(user_output, '~w========\n', [G])).
 
