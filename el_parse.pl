@@ -48,23 +48,27 @@ Process all energylabels in a single parse.
 % in between these 10 runs.
 
 el_parse(StageAlias, FromFile, ToDir):-
-  rdf_unload_graph(el),
+  % Stats
+  ap_stage_init(StageAlias, 2354560),
+  
   forall(
     between(1, 9, N),
-    (
-      atom_number(Prefix, N),
-      xml_stream(
-        FromFile,
-        'Pandcertificaat',
-        process_postcode(StageAlias, el, Prefix)
+    call_cleanup(
+      (
+        atom_number(Prefix, N),
+        xml_stream(
+          FromFile,
+          'Pandcertificaat',
+          process_postcode(StageAlias, el, Prefix)
+        ),
+        atomic_list_concat([el,Prefix], '_', ToFileName),
+        absolute_file_name(
+          ToFileName,
+          ToFile,
+          [access(write),file_type(turtle),relative_to(ToDir)]
+        ),
+        rdf_save2(ToFile, [format(turtle),graph(el)])
       ),
-      atomic_list_concat([el,Prefix], '_', ToFileName),
-      absolute_file_name(
-        ToFileName,
-        ToFile,
-        [access(write),file_type(turtle),relative_to(ToDir)]
-      ),
-      rdf_save2(ToFile, [format(turtle),graph(el)]),
       rdf_unload_graph(el)
     )
   ).
