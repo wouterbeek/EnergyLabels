@@ -182,6 +182,5 @@ el_clean_(StageAlias, ToDir, FromFile):-
     ),
     [FromFile]
   ),
-  ap_stage_tick(StageAlias),
-  forall(rdf_graph(G), format(user_output, '~w========\n', [G])).
+  ap_stage_tick(StageAlias).
 
