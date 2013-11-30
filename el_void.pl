@@ -23,6 +23,7 @@ Asserts the VoID description of the energy labels dataset.
 :- use_module(rdfs(rdfs_label_build)).
 :- use_module(void(void_stat)).
 :- use_module(xml(xml_namespace)).
+:- use_module(xsd(xsd_dateTime)).
 
 :- xml_register_namespace(dbpedia, 'http://dbpedia.org/resource/').
 :- xml_register_namespace(dcterms, 'http://purl.org/dc/terms/').
