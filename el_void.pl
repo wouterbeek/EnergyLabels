@@ -185,7 +185,6 @@ assert_el_void_dataset(G, DD, N, Dir):-
 
   % void:subset
   rdf_assert(DD, void:subset, DS, G),
-gtrace,
   void_assert_statistics(G, DS, DS_File).
 
 assert_energylabels_original_dataset(G, ODS):-
