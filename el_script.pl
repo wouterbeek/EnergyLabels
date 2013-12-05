@@ -40,14 +40,14 @@ The result is intended to be used within the Huiskluis project.
 @author Wouter Beek
 @see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
 @tbd insert_newlines/2 seems to use too much memory.
-@version 2013/04, 2013/06-2013/07, 2013/09-2013/11
+@version 2013/04, 2013/06-2013/07, 2013/09-2013/12
 */
 
 :- use_module(ap(ap)).
-:- use_module(ap(ap_act)). % Used in ap_stage/2.
 :- use_module(ap(ap_stat)).
 :- use_module(el(el_parse)). % Used in ap_stage/2.
 :- use_module(el(el_void)).
+:- use_module(generics(archive_ext)).
 :- use_module(generics(codes_ext)).
 :- use_module(generics(db_ext)).
 :- use_module(generics(list_ext)).
@@ -68,7 +68,6 @@ The result is intended to be used within the Huiskluis project.
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
 
-:- db_add_novel(user:prolog_file_type('tar.gz', archive)).
 :- db_add_novel(user:prolog_file_type(dx,  dx  )).
 :- db_add_novel(user:prolog_file_type(txt, text)).
 :- db_add_novel(user:prolog_file_type(xml, xml )).
@@ -85,30 +84,27 @@ el_script:-
   ap(
     [process(xml2rdf),project(el),to('VoID',turtle)],
     [
-      ap_stage(
-        [from(input,'v20130401.dx',archive),to(_,v20130401,dx)],
-        ap_extract_archive
-      ),
+      ap_stage([from(input,'v20130401.dx',archive)], archive_extract),
       ap_stage([from(_,v20130401,dx)], to_small_files),
       ap_stage([], insert_newlines),
-      ap_stage([to(_,big,xml)], ap_merge_into_one_file),
+      ap_stage([to(_,big,xml)], merge_into_one_file),
       ap_stage([from(_,big,xml),stat_lag(100)], el_parse),
       ap_stage([], el_clean),
       ap_stage([to(output,'VoID',turtle)], assert_el_void)
     ]
   ).
 
-assert_el_void(_StageAlias, FromDir, ToFile):-
+assert_el_void(FromDir, ToFile):-
   G = 'VoID',
   assert_el_void(G, FromDir),
   rdf_save2(ToFile, [format(turtle),graph(G)]).
 
 % Split into smaller files.
-to_small_files(_StageAlias, FromFile, ToDir):-
+to_small_files(FromFile, ToDir):-
   split_into_smaller_files(FromFile, ToDir, temp_).
 
 % Insert newlines in small files.
-insert_newlines(_StageAlias, FromDir, ToDir):-
+insert_newlines(FromDir, ToDir):-
   % Add newlines to the small files.
   directory_file_path(FromDir, 'temp_*', RE),
   expand_file_name(RE, FromFiles),
@@ -151,7 +147,7 @@ insert_newlines_worker(ToDir, FromFiles):-
     )
   ).
 
-el_clean(StageAlias, FromDir, ToDir):-
+el_clean(FromDir, ToDir):-
   % Do this for every Turtle file in the from directory.
   % (Due to memory limitations.)
   directory_files(
@@ -164,13 +160,17 @@ el_clean(StageAlias, FromDir, ToDir):-
     FromDir,
     FromFiles
   ),
+  
+  % STATS
   length(FromFiles, Potential),
-  ap_stage_init(StageAlias, Potential),
-  maplist(el_clean_(StageAlias, ToDir), FromFiles).
+  ap_stage_init(Potential),
+  
+  maplist(el_clean_(ToDir), FromFiles).
 
-el_clean_(StageAlias, ToDir, FromFile):-
+el_clean_(ToDir, FromFile):-
   file_directory_alternative(FromFile, ToDir, ToFile),
   rdf_equal(el:huisnummer_toevoeging, P),
+  
   % Load and unload RDF.
   rdf_setup_call_cleanup(
     [to(ToFile)],
@@ -182,5 +182,7 @@ el_clean_(StageAlias, ToDir, FromFile):-
     ),
     [FromFile]
   ),
-  ap_stage_tick(StageAlias).
+  
+  % STATS
+  ap_stage_tick.
 

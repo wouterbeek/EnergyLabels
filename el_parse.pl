@@ -1,8 +1,7 @@
 :- module(
   el_parse,
   [
-    el_parse/3 % +StageAlias:atom
-               % +FromFile:atom
+    el_parse/2 % +FromFile:atom
                % +ToDirectory:atom
   ]
 ).
@@ -12,7 +11,7 @@
 Process all energylabels in a single parse.
 
 @author Wouter Beek
-@version 2013/06-2013/07, 2013/09-2013/11
+@version 2013/06-2013/07, 2013/09-2013/12
 */
 
 :- use_module(ap(ap_stat)).
@@ -37,19 +36,15 @@ Process all energylabels in a single parse.
 
 
 
-%! el_parse(
-%!   +StageAlias:atom,
-%!   +FromFile:atom,
-%!   +ToDirectory:atom
-%! ) is det.
+%! el_parse(+FromFile:atom, +ToDirectory:atom) is det.
 % Since the number of entries in the energylabels dataset is too big to
 % keep into memory, we are going to translate the XML into 10 separate
 % RDF graphs. We do this sequentially, cleaning out the internal RDF index
 % in between these 10 runs.
 
-el_parse(StageAlias, FromFile, ToDir):-
-  % Stats
-  ap_stage_init(StageAlias, 2354560),
+el_parse(FromFile, ToDir):-
+  % STATS
+  ap_stage_init(2354560),
   
   forall(
     between(1, 9, N),
@@ -59,7 +54,7 @@ el_parse(StageAlias, FromFile, ToDir):-
         xml_stream(
           FromFile,
           'Pandcertificaat',
-          process_postcode(StageAlias, el, Prefix)
+          process_postcode(el, Prefix)
         ),
         atomic_list_concat([el,Prefix], '_', ToFileName),
         absolute_file_name(
@@ -73,12 +68,12 @@ el_parse(StageAlias, FromFile, ToDir):-
     )
   ).
 
-process_postcode(StageAlias, G, Prefix, DOM0):-
+process_postcode(G, Prefix, DOM0):-
   Spec =.. ['Pandcertificaat',content],
   xpath_chk(DOM0, //Spec, DOM1),
-  process_postcode_(StageAlias, G, Prefix, DOM1).
+  process_postcode_(G, Prefix, DOM1).
 
-process_postcode_(StageAlias, G, Prefix, DOM1):-
+process_postcode_(G, Prefix, DOM1):-
   % Filter.
   memberchk(element('PandVanMeting_postcode', _, [Postcode]), DOM1),
   sub_atom(Postcode, 0, _Length, _After, Prefix), !,
@@ -148,9 +143,9 @@ process_postcode_(StageAlias, G, Prefix, DOM1):-
     []
   ),
   
-  % DEB
-  ap_stage_tick(StageAlias).
-process_postcode_(_PS, _G, _Prefix, _DOM).
+  % STATS
+  ap_stage_tick.
+process_postcode_(_G, _Prefix, _DOM).
 
 trans('Afmeldnummer',                               el:afmeldnummer,                   integer).
 trans('Meting_geldig_tot',                          el:meting_geldig_tot,              date   ).
