@@ -79,8 +79,6 @@ The result is intended to be used within the Huiskluis project.
 
 
 el_script:-
-  % This is needed for stage 4->5.
-  %set_prolog_stack(local, limit(2*10**9)),
   ap(
     [process(xml2rdf),project(el),to('VoID',turtle)],
     [
