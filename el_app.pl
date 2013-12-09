@@ -10,7 +10,7 @@ the LOD version of the dataset of energy labels.
      http://onehackoranother.com/projects/jquery/tipsy/
 @see Used Ultimate CSS Gradient Generator for background gradient
      http://www.colorzilla.com/gradient-editor/
-@version 2013/10-2013/11
+@version 2013/10-2013/12
 */
 
 :- use_module(generics(list_ext)).
@@ -22,7 +22,6 @@ the LOD version of the dataset of energy labels.
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_parameters)).
 :- use_module(library(http/http_path)).
-:- use_module(library(http/http_server_files)).
 :- use_module(library(http/js_write)).
 :- use_module(library(lists)).
 :- use_module(library(pairs)).
@@ -36,20 +35,17 @@ the LOD version of the dataset of energy labels.
 :- use_module(xml(xml_namespace)).
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
+
 :- register_sparql_prefix(el).
 :- register_sparql_remote(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
 
 % /css
-:- db_add_novel(http:location(css, root(css), [])).
 :- db_add_novel(user:file_search_path(css, el(css))).
-:- http_handler(css(.), serve_files_in_directory(css), [prefix]).
 :- html_resource(css('el.css'), []).
 :- html_resource(css('tipsy.css'), []).
 
 % /js
-:- db_add_novel(http:location(js, root(js), [])).
 :- db_add_novel(user:file_search_path(js, el(js))).
-:- http_handler(js(.), serve_files_in_directory(js), [prefix]).
 :- html_resource(js('jsquery.min.js'), []).
 :- html_resource(js('jquery.tipsy.js'), [requires(js('jsquery.min.js'))]).
 
@@ -245,6 +241,7 @@ el_indexes(PostcodePrefix, Ls2):-
   enqueue_sparql(el, Query, _VarNames, Rows),
   sparql_rows_to_lists(Rows, Ls1),
   maplist(to_pairs, Ls1, Ls2).
+
 to_pairs([H|T], H-T).
 
 % Already loaded in memory.
