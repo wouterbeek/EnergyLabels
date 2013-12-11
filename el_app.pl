@@ -141,6 +141,7 @@ el_content(Postcode, HouseNumber, HouseNumberAddition) -->
     \html_requires(js('jquery.tipsy.js')),
     div(class=rainbow, [
       \js_script({|javascript(_)||
+        "use strict";
         window.onload=function(){$(".data_item").tipsy({gravity: 'n'});};
       |}),
       div(
