@@ -14,6 +14,7 @@ the LOD version of the dataset of energy labels.
 */
 
 :- use_module(generics(list_ext)).
+:- use_module(generics(row_ext)).
 :- use_module(html(html_form)).
 :- use_module(html(html_table)).
 :- use_module(library(apply)).
@@ -31,13 +32,13 @@ the LOD version of the dataset of energy labels.
 :- use_module(rdf(rdf_serial)).
 :- use_module(server(app_ui)).
 :- use_module(server(web_modules)).
+:- use_module(sparql(sparql_db)).
 :- use_module(sparql(sparql_ext)).
 :- use_module(xml(xml_namespace)).
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
-
-:- register_sparql_prefix(el).
-:- register_sparql_remote(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
+:- sparql_add_prefix(el).
+:- sparql_add_remote(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
 
 % /css
 :- db_add_novel(user:file_search_path(css, el(css))).
@@ -240,7 +241,7 @@ el_indexes(PostcodePrefix, Ls2):-
     Query
   ),
   enqueue_sparql(el, Query, _VarNames, Rows),
-  sparql_rows_to_lists(Rows, Ls1),
+  rows_to_lists(Rows, Ls1),
   maplist(to_pairs, Ls1, Ls2).
 
 to_pairs([H|T], H-T).
