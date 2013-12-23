@@ -219,7 +219,7 @@ el_index(Postcode, HouseNumber, HouseNumberAddition, Building):-
     _Extra,
     Query
   ),
-  enqueue_sparql(el, Query, _VarNames, [row(Building)|_]).
+  'SPARQL_enqueue'(el, Query, _VarNames, [row(Building)|_]).
 
 el_indexes(PostcodePrefix, Ls2):-
   Where1 = '?building a el:Building .',
@@ -240,7 +240,7 @@ el_indexes(PostcodePrefix, Ls2):-
     order_by([order(asc)],[index]),
     Query
   ),
-  enqueue_sparql(el, Query, _VarNames, Rows),
+  'SPARQL_enqueue'(el, Query, _VarNames, Rows),
   rows_to_lists(Rows, Ls1),
   maplist(to_pairs, Ls1, Ls2).
 
