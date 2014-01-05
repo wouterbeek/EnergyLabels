@@ -123,19 +123,22 @@ insert_newlines_worker(ToDir, FromFiles):-
           ToFile,
           [access(write),file_type(text),relative_to(ToDir)]
         ),
-        read_stream_to_codes(Stream, Codes),
-        codes_replace2(Codes, [62,60], [62,10,60], NewCodes_),
+        read_stream_to_codes(Stream, Codes1),
+        % Add linefeeds between tags.
+        % From: `> <`
+        % To:   `> LINE-FEED <`
+        phrase(dcg_replace([[62,60]-[62,10,60]]), Codes1, Codes2),
         % It will sometimes happen that the cuttoff lies exactly
-        % in between =|>|= and =|<|=.
+        %  between `>` and `<`.
+        % We then have to start with a linefeed.
         (
-          first(NewCodes_, 60)
+          first(Codes2, 60)
         ->
-          NewCodes = [10|NewCodes_]
+          Codes3 = [10|Codes2]
         ;
-          NewCodes = NewCodes_
+          Codes3 = Codes2
         ),
-        atom_codes(NewAtom, NewCodes),
-        atom_to_file(NewAtom, ToFile)
+        codes_to_file(Codes3, ToFile)
       ),
       (
         close(Stream),
