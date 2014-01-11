@@ -14,7 +14,6 @@ the LOD version of the dataset of energy labels.
 */
 
 :- use_module(generics(list_ext)).
-:- use_module(generics(row_ext)).
 :- use_module(html(html_form)).
 :- use_module(html(html_table)).
 :- use_module(library(apply)).
