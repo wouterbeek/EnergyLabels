@@ -51,7 +51,7 @@ the LOD version of the dataset of energy labels.
 
 :- http_handler(root(el), el, []).
 
-:- initialization(web_module_add('EnergyLabels', el_app, el)).
+:- initialization(web_module_add('EnergyLabels', el_app)).
 
 
 
