@@ -189,54 +189,52 @@ el_head -->
   html(title('Energy Labels Demo App')).
 
 el_index(Postcode, HouseNumber, HouseNumberAddition, Building):-
-  Where1 = '?building a el:Building .',
-  Where2 = '?building el:postcode ?postcode .',
-  format(atom(Where3), 'filter regex(?postcode, "^~w") .', [Postcode]),
-  format(atom(Where4), '?building el:huisnummer ~w .', [HouseNumber]),
-  Where7 = '?building el:certificaat ?certificaat .',
-  Where8 = '?certificaat el:energie_prestatieindex ?index .',
-
-  (
-    HouseNumberAddition = no_house_number_addition
-  ->
-    Where = [Where1,Where2,Where3,Where4,Where7,Where8]
-  ;
-    Where5 = '?building el:huisnummer_toevoeging ?house_number_addition .',
-    format(
-      atom(Where6),
-      'FILTER STRENDS(?house_number_addition, "~w")',
-      [HouseNumberAddition]
+  phrase(
+    'SPARQL_formulate'(
+      'http://example.com/el',
+      [el],
+      select,
+      true,
+      [building],
+      [
+        rdf(var(building), a, el:'Building'),
+        rdf(var(building), el:postcode, var(postcode)),
+        filter(regex(var(postcode), at_start(Postcode))),
+        rdf(var(building), el:huisnummer, integer(HouseNumber)),
+        rdf(var(building), el:huisnummer_toevoeging, var(house_number_addition)),
+        filter(strends(var(house_number_addition), string(HouseNumberAddition))),
+        rdf(var(building), el:certificaat, var(certificate)),
+        rdf(var(certificate), el:engergie_prestatieindex, var(index))
+      ],
+      inf,
+      _
     ),
-    Where = [Where1,Where2,Where3,Where4,Where5,Where6,Where7,Where8]
-  ),
-
-  formulate_sparql(
-    default_graph('http://example.com/el'),
-    [el],
-    select([distinct(true)],[building]),
-    Where,
-    _Extra,
     Query
   ),
   'SPARQL_enqueue'(el, Query, _VarNames, [row(Building)|_]).
 
 el_indexes(PostcodePrefix, Ls2):-
-  Where1 = '?building a el:Building .',
-  Where2 = '?building el:postcode ?postcode .',
-  format(atom(Where3), 'filter regex(?postcode, "^~w") .', [PostcodePrefix]),
-  Where4 = '?building el:huisnummer ?house_number .',
-  Where5 = 'OPTIONAL { ?building el:huisnummer_toevoeging ?house_number_addition . }',
-  Where6 = '?building el:certificaat ?certificaat .',
-  Where7 = '?certificaat el:energie_prestatieindex ?index .',
-  formulate_sparql(
-    default_graph('http://example.com/el'),
-    [el],
-    select(
-      [distinct(true)],
-      [building,postcode,house_number,house_number_addition,index]
+  phrase(
+    'SPARQL_formulate'(
+      'http://example.com/el',
+      [el],
+      select,
+      true,
+      [building,postcode,house_number,house_number_addition,index],
+      [
+        rdf(var(building), a el:Building .',
+        rdf(var(building), el:postcode ?postcode .',
+        format(atom(Where3), 'filter regex(?postcode, "^~w") .', [PostcodePrefix]),
+        rdf(var(building), el:huisnummer ?house_number .',
+        optional([
+          rdf(var(building), el:huisnummer_toevoeging, var(house_number_addition))
+        ]),
+        rdf(var(building), el:certificaat, var(certificaat)),
+        rdf(var(certificaat), el:energie_prestatieindex, var(index))
+      ],
+      inf,
+      asc-[index]
     ),
-    [Where1,Where2,Where3,Where4,Where5,Where6,Where7],
-    order_by([order(asc)],[index]),
     Query
   ),
   'SPARQL_enqueue'(el, Query, _VarNames, Rows),
