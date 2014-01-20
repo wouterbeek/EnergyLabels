@@ -191,6 +191,7 @@ el_head -->
 el_index(Postcode, HouseNumber, HouseNumberAddition, Building):-
   phrase(
     'SPARQL_formulate'(
+      _,
       'http://example.com/el',
       [el],
       select,
@@ -216,6 +217,7 @@ el_index(Postcode, HouseNumber, HouseNumberAddition, Building):-
 el_indexes(PostcodePrefix, Ls2):-
   phrase(
     'SPARQL_formulate'(
+      _,
       'http://example.com/el',
       [el],
       select,
