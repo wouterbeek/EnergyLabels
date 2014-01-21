@@ -82,7 +82,7 @@ el_script:-
   ap(
     [process(xml2rdf),project(el),to('VoID',turtle)],
     [
-      ap_stage([from(input,'v20130401.dx',archive)], archive_extract),
+      ap_stage([from(input,'v20130401.dx',archive)], extract_archive),
       ap_stage([from(_,v20130401,dx)], to_small_files),
       ap_stage([], insert_newlines),
       ap_stage([to(_,big,xml)], merge_into_one_file),
