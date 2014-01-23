@@ -32,12 +32,11 @@ the LOD version of the dataset of energy labels.
 :- use_module(server(app_ui)).
 :- use_module(server(web_modules)).
 :- use_module(sparql(sparql_db)).
-:- use_module(sparql(sparql_ext)).
+:- use_module(sparql('SPARQL_ext')).
 :- use_module(xml(xml_namespace)).
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
-:- sparql_add_prefix(el).
-:- sparql_add_remote(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
+:- 'SPARQL_register_remote'(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
 
 % /css
 :- db_add_novel(user:file_search_path(css, el(css))).
