@@ -62,7 +62,6 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
 :- use_module(rdf(rdf_clean)).
-:- use_module(rdf(rdf_meta)).
 :- use_module(rdf(rdf_serial)).
 :- use_module(xml(xml_namespace)).
 
@@ -71,8 +70,6 @@ The result is intended to be used within the Huiskluis project.
 :- db_add_novel(user:prolog_file_type(dx,  dx  )).
 :- db_add_novel(user:prolog_file_type(txt, text)).
 :- db_add_novel(user:prolog_file_type(xml, xml )).
-
-:- nodebug(el_script).
 
 :- initialization(el_script).
 
@@ -169,7 +166,7 @@ el_clean(FromDir, ToDir):-
   maplist(el_clean_(ToDir), FromFiles).
 
 el_clean_(ToDir, FromFile):-
-  file_directory_alternative(FromFile, ToDir, ToFile),
+  file_alternative(FromFile, ToDir, _, _, ToFile),
   rdf_equal(el:huisnummer_toevoeging, P),
   
   % Load and unload RDF.
