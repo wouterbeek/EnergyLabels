@@ -169,7 +169,7 @@ el_clean(FromDir, ToDir):-
   maplist(el_clean_(ToDir), FromFiles).
 
 el_clean_(ToDir, FromFile):-
-  file_directory_alternative(FromFile, ToDir, ToFile),
+  file_alternative(FromFile, ToDir, _, _, ToFile),
   rdf_equal(el:huisnummer_toevoeging, P),
   
   % Load and unload RDF.
