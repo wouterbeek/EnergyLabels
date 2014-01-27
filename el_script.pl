@@ -72,8 +72,6 @@ The result is intended to be used within the Huiskluis project.
 :- db_add_novel(user:prolog_file_type(txt, text)).
 :- db_add_novel(user:prolog_file_type(xml, xml )).
 
-:- nodebug(el_script).
-
 :- initialization(el_script).
 
 
