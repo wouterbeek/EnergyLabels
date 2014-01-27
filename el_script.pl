@@ -62,7 +62,6 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
 :- use_module(rdf(rdf_clean)).
-:- use_module(rdf(rdf_meta)).
 :- use_module(rdf(rdf_serial)).
 :- use_module(xml(xml_namespace)).
 
