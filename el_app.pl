@@ -127,12 +127,8 @@ el_content(Postcode, HouseNumber, HouseNumberAddition) -->
   },
   html([
     \html_table(
-      [
-        caption('SPARQL results'),
-        header(true),
-        highlighted_rows([I]),
-        indexed(true)
-      ],
+      [header(true),highlighted_rows([I]),indexed(true)],
+      `SPARQL results`,
       [['Postcode','Number','Addition','Prestation index']|Ls2]
     ),
     \html_requires(css('el.css')),
