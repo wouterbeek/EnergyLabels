@@ -174,7 +174,7 @@ el_clean_(ToDir, FromFile):-
     [],
     FromFile,
     rdf_strip_literal([answer('A')], ['-'], _S, P),
-    turtle,
+    [format(turtle)],
     ToFile
   ),
   
