@@ -90,9 +90,9 @@ el_script:-
   ).
 
 assert_el_void(FromDir, ToFile):-
-  G = 'VoID',
-  assert_el_void(G, FromDir),
-  rdf_save2(ToFile, [format(turtle),graph(G)]).
+  Graph = 'VoID',
+  assert_el_void(Graph, FromDir),
+  rdf_save([format(turtle)], Graph, ToFile).
 
 % Split into smaller files.
 to_small_files(FromFile, ToDir):-
@@ -171,14 +171,11 @@ el_clean_(ToDir, FromFile):-
   
   % Load and unload RDF.
   rdf_setup_call_cleanup(
-    [to(ToFile)],
-    rdf_strip_literal(
-      [answer('A')],
-      ['-'],
-      _S,
-      P
-    ),
-    [FromFile]
+    [],
+    FromFile,
+    rdf_strip_literal([answer('A')], ['-'], _S, P),
+    turtle,
+    ToFile
   ),
   
   % STATS

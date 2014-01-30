@@ -250,7 +250,7 @@ load_el_data:-
     File,
     [access(read),file_errors(fail),file_type(turtle)]
   ), !,
-  rdf_load2(File, [format(turtle),graph(el)]).
+  rdf_load([format(turtle)], el, File).
 % Has to be created.
 load_el_data:-
   use_module(el(el_script)).

@@ -62,7 +62,7 @@ el_parse(FromFile, ToDir):-
           ToFile,
           [access(write),file_type(turtle),relative_to(ToDir)]
         ),
-        rdf_save2(ToFile, [format(turtle),graph(el)])
+        rdf_save([format(turtle)], el, ToFile)
       ),
       rdf_unload_graph(el)
     )
