@@ -77,7 +77,8 @@ The result is intended to be used within the Huiskluis project.
 
 el_script:-
   ap(
-    [process(xml2rdf),project(el),to('VoID',turtle)],
+    [reset(true),to('VoID',turtle)],
+    el,
     [
       ap_stage([from(input,'v20130401.dx',archive)], extract_archive),
       ap_stage([from(_,v20130401,dx)], to_small_files),
@@ -86,7 +87,8 @@ el_script:-
       ap_stage([from(_,big,xml),stat_lag(100)], el_parse),
       ap_stage([], el_clean),
       ap_stage([to(output,'VoID',turtle)], assert_el_void)
-    ]
+    ],
+    _
   ).
 
 assert_el_void(FromDir, ToFile):-
