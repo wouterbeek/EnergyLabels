@@ -40,7 +40,7 @@ The result is intended to be used within the Huiskluis project.
 @author Wouter Beek
 @see https://data.overheid.nl/data/dataset/energielabels-agentschap-nl
 @tbd insert_newlines/2 seems to use too much memory.
-@version 2013/04, 2013/06-2013/07, 2013/09-2013/12
+@version 2013/04, 2013/06-2013/07, 2013/09-2013/12, 2014/02
 */
 
 :- use_module(ap(ap)).
@@ -49,7 +49,6 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(el(el_void)).
 :- use_module(generics(archive_ext)).
 :- use_module(generics(codes_ext)).
-:- use_module(generics(db_ext)).
 :- use_module(generics(list_ext)).
 :- use_module(generics(thread_ext)).
 :- use_module(library(apply)).
@@ -67,10 +66,6 @@ The result is intended to be used within the Huiskluis project.
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
 
-:- db_add_novel(user:prolog_file_type(dx,  dx  )).
-:- db_add_novel(user:prolog_file_type(txt, text)).
-:- db_add_novel(user:prolog_file_type(xml, xml )).
-
 :- initialization(el_script).
 
 
@@ -81,7 +76,7 @@ el_script:-
     el,
     [
       ap_stage([from(input,'v20130401.dx',archive)], extract_archive),
-      ap_stage([from(_,v20130401,dx)], to_small_files),
+      ap_stage([from(_,'v20130401.dx',_)], to_small_files),
       ap_stage([], insert_newlines),
       ap_stage([to(_,big,xml)], merge_into_one_file),
       ap_stage([from(_,big,xml),stat_lag(100)], el_parse),
