@@ -203,6 +203,7 @@ el_index(Postcode, HouseNumber, HouseNumberAddition, Building):-
         rdf(var(certificate), el:engergie_prestatieindex, var(index))
       ],
       inf,
+      _,
       _
     ),
     Query
@@ -230,6 +231,7 @@ el_indexes(PostcodePrefix, Ls2):-
         rdf(var(certificaat), el:energie_prestatieindex, var(index))
       ],
       inf,
+      _,
       asc-[index]
     ),
     Query
