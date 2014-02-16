@@ -121,7 +121,7 @@ insert_newlines_worker(ToDir, FromFiles):-
         % Add linefeeds between tags.
         % From: `> <`
         % To:   `> LINE-FEED <`
-        phrase(dcg_replace([[62,60]-[62,10,60]]), Codes1, Codes2),
+        phrase(dcg_replace([62,60], [62,10,60]), Codes1, Codes2),
         % It will sometimes happen that the cuttoff lies exactly
         %  between `>` and `<`.
         % We then have to start with a linefeed.
