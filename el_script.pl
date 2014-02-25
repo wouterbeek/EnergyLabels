@@ -47,7 +47,6 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(ap(ap_stat)).
 :- use_module(el(el_parse)). % Used in ap_stage/2.
 :- use_module(el(el_void)).
-:- use_module(generics(archive_ext)).
 :- use_module(generics(codes_ext)).
 :- use_module(generics(list_ext)).
 :- use_module(generics(thread_ext)).
@@ -57,6 +56,7 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
 :- use_module(library(semweb/rdf_db)).
+:- use_module(os(archive_ext)).
 :- use_module(os(dir_ext)).
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
