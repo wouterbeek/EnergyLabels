@@ -21,6 +21,7 @@ Asserts the VoID description of the energy labels dataset.
 :- use_module(rdf(rdf_datatype)).
 :- use_module(rdf(rdf_lit_build)).
 :- use_module(rdfs(rdfs_label_build)).
+:- use_module(void(void_db)). % XML namespace.
 :- use_module(void(void_stat)).
 :- use_module(xml(xml_namespace)).
 :- use_module(xsd(xsd_dateTime)).
@@ -30,7 +31,6 @@ Asserts the VoID description of the energy labels dataset.
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
 :- xml_register_namespace(foaf, 'http://xmlns.com/foaf/0.1/').
 :- xml_register_namespace(formats, 'http://www.w3.org/ns/formats/').
-:- xml_register_namespace(void, 'http://rdfs.org/ns/void#').
 :- xml_register_namespace(xsd, 'http://www.w3.org/2001/XMLSchema#').
 
 
