@@ -27,7 +27,7 @@ the LOD version of the dataset of energy labels.
 :- use_module(library(pairs)).
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).
-:- use_module(rdf(rdf_lit)).
+:- use_module(rdf(rdf_literal)).
 :- use_module(rdf(rdf_serial)).
 :- use_module(server(app_ui)).
 :- use_module(server(web_modules)).
@@ -164,7 +164,7 @@ data_item_label(
   [Postcode1,HouseNumber1,HouseNumberAddition1,PrestationIndex1],
   Label
 ):-
-  rdf_simple_literal(Postcode1, Postcode2),
+  rdf_simple_literal_value(Postcode1, Postcode2),
   rdf_typed_literal(HouseNumber1, _, HouseNumber2),
   rdf_typed_literal(PrestationIndex1, _, PrestationIndex2),
   (
@@ -172,7 +172,7 @@ data_item_label(
   ->
     format(atom(Label), '~w-~w ~w', [Postcode2,HouseNumber2,PrestationIndex2])
   ;
-    rdf_simple_literal(HouseNumberAddition1, HouseNumberAddition2),
+    rdf_simple_literal_value(HouseNumberAddition1, HouseNumberAddition2),
     format(
       atom(Label),
       '~w-~w~w ~w',
