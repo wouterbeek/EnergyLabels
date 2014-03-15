@@ -28,7 +28,7 @@ the LOD version of the dataset of energy labels.
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).
 :- use_module(rdf(rdf_serial)).
-:- use_module(rdf_term(rdf_typed_literal)).
+:- use_module(rdf_term(rdf_literal)).
 :- use_module(server(app_ui)).
 :- use_module(server(web_modules)).
 :- use_module(sparql(sparql_db)).
@@ -109,8 +109,6 @@ el_content(Postcode, HouseNumber, _HouseNumberAddition) -->
     Postcode == no_postcode
   ;
     HouseNumber == no_house_number
-  %;
-  %  HouseNumberAddition == no_house_number_addition
   )}, !.
 el_content(Postcode, HouseNumber, HouseNumberAddition) -->
   {
@@ -164,9 +162,9 @@ data_item_label(
   [Postcode1,HouseNumber1,HouseNumberAddition1,PrestationIndex1],
   Label
 ):-
-  rdf_simple_literal_lexical_form(Postcode1, Postcode2),
-  rdf_typed_literal_lexical_form(HouseNumber1, HouseNumber2),
-  rdf_typed_literal_lexical_form(PrestationIndex1, PrestationIndex2),
+  rdf_literal(Postcode1,        Postcode2,        _, _),
+  rdf_literal(HouseNumber1,     HouseNumber2,     _, _),
+  rdf_literal(PrestationIndex1, PrestationIndex2, _, _),
   (
     HouseNumberAddition1 == '$null$'
   ->
