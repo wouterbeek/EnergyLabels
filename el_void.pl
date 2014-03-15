@@ -18,9 +18,9 @@ Asserts the VoID description of the energy labels dataset.
 :- use_module(library(semweb/rdf_db)).
 :- use_module(os(datetime_ext)).
 :- use_module(rdf(rdf_build)).
-:- use_module(rdf(rdf_datatype)).
-:- use_module(rdf(rdf_lit_build)).
-:- use_module(rdfs(rdfs_label_build)).
+:- use_module(rdf_term(rdf_language_tagged_string)).
+:- use_module(rdf_term(rdf_string)).
+:- use_module(rdfs(rdfs_label_ext)).
 :- use_module(void(void_db)). % XML namespace.
 :- use_module(void(void_stat)).
 :- use_module(xml(xml_namespace)).
@@ -41,9 +41,7 @@ assert_el_void(G, Dir):-
   %%%% dcterms:contributor
 
   % dcterms:created
-  get_time(POSIX_TS),
-  posix_timestamp_to_xsd_dateTime(POSIX_TS, XSD_DT),
-  rdf_assert_datatype(DD, dcterms:created, xsd:date, XSD_DT, G),
+  rdf_assert_now(DD, dcterms:created, G),
 
   % dcterms:creator
   assert_foaf_wouterbeek(G, WB),
@@ -52,10 +50,10 @@ assert_el_void(G, Dir):-
   % dcterms:date
   % A point or period of time associated with an event in the life-cycle
   % of the resource.
-  %%%%rdf_assert_datatype(DD, dcterms:date, xsd:date, XSD_DT, G),
+  %%%%rdf_assert_datatype(DD, dcterms:date, XSD_DT, xsd:date, G),
 
   % dcterms:description
-  rdf_assert_literal(DD, dcterms:description, nl,
+  rdf_assert_language_tagged_string(DD, dcterms:description,
     'Ruwe data van afgegeven energielabels van gebouwen wordt in het kader\c
      van Apps voor Nederland ter beschikking gesteld. Per energielabel is de\c
      beschikbare informatie: gebouwinformatie; dit betreft de plaats,\c
@@ -65,11 +63,11 @@ assert_el_void(G, Dir):-
      van opname en registratie door de adviseur, de labelwaarde\c
      (energie-index) en de labelklasse, bron van de opname; het berekende\c
      gebouwgebonden energieverbruik in MJ, en indien beschikbaar m3 gas,\c
-     kWh elektrisch, MJ warmte en het aantal m2 van het gebouw.', G),
+     kWh elektrisch, MJ warmte en het aantal m2 van het gebouw.', nl, G),
 
   % dcterms:issued
   % Date of formal issuance (e.g., publication) of the dataset.
-  %%%%rdf_assert_datatype(DD, dcterms:issued, xsd:date, XSD_DT, G),
+  %%%%rdf_assert_datatype(DD, dcterms:issued, XSD_DT, xsd:date, G),
 
   % dcterms:license
   rdf_assert(DD, dcterms:license,
@@ -86,7 +84,8 @@ assert_el_void(G, Dir):-
   rdf_assert(DD, dcterms:source, ODS, G),
 
   % dcterms:title
-  rdf_assert_literal(DD, dcterms:title, nl, 'Energielabels - Agentschap NL', G),
+  rdf_assert_language_tagged_string(DD, dcterms:title,
+      'Energielabels - Agentschap NL', nl, G),
 
   % foaf:homepage
   rdf_assert(DD, foaf:homepage,
@@ -99,13 +98,13 @@ assert_el_void(G, Dir):-
   rdf_assert_individual(DD, void:'DatasetDescription', G),
 
   % rdfs:label
-  rdfs_assert_label(DD, en, 'Energylabels'),
-  rdfs_assert_label(DD, nl, 'Energielabels'),
+  rdfs_assert_label(DD, 'Energylabels', en, G),
+  rdfs_assert_label(DD, 'Energielabels', nl, G),
 
   % void:datadump
 
   % void:documents
-  rdf_assert_datatype(DD, void:documents, xsd:integer, 10, G),
+  rdf_assert_datatype(DD, void:documents, 10, xsd:integer, G),
 
   % void:exampleResource
   % @tbd A specific building.
@@ -137,7 +136,7 @@ assert_el_void(G, Dir):-
   % void:uriRegexPattern
 
   % void:uriSpace
-  rdf_assert_literal(DD, void:uriSpace,
+  rdf_assert(DD, void:uriSpace,
     'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/', G),
 
   % void:vocabulary
@@ -163,10 +162,10 @@ assert_el_void_dataset(G, DD, N, Dir):-
 
   % dcterms:description.
   format(atom(Desc), 'Energylabel data for postcodes starting with ~w.', [N]),
-  rdf_assert_literal(DS, dcterms:description, en, Desc, G),
+  rdf_assert_language_tagged_string(DS, dcterms:description, Desc, en, G),
 
   % dcterms:title
-  rdf_assert_literal(DS, dcterms:title, en, DS_Name, G),
+  rdf_assert_language_tagged_string(DS, dcterms:title, DS_Name, en, G),
 
   % rdf:type
   rdf_assert_individual(DS, void:'Dataset', G),
@@ -200,18 +199,18 @@ assert_foaf_agentschapnl(G, ANL):-
   % rdf:type
   rdf_assert_individual(ANL, foaf:'Organization', G),
   % rdfs:label
-  rdfs_assert_label(ANL, nl, 'Agentschap NL', G).
+  rdfs_assert_language_tagged_string(ANL, 'Agentschap NL', nl, G).
 
 assert_foaf_wouterbeek(G, WB):-
   rdf_global_id(el:'WouterBeek', WB),
   % foaf:firstName
-  rdf_assert_literal(WB, foaf:firstName, 'Wouter', G),
+  rdf_assert_string(WB, foaf:firstName, 'Wouter', G),
   % foaf:lastName
-  rdf_assert_literal(WB, foaf:lastName, 'Beek', G),
+  rdf_assert_string(WB, foaf:lastName, 'Beek', G),
   % foaf:mbox
   rdf_assert(WB, foaf:mbox, 'mailto:me@wouterbeek.com', G),
   % rdf:type
   rdf_assert_individual(WB, foaf:'Person', G),
   % rdfs:label
-  rdfs_assert_label(WB, nl, 'Wouter Beek', G).
+  rdfs_assert_language_tagged_string(WB, 'Wouter Beek', nl, G).
 

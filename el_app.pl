@@ -10,7 +10,7 @@ the LOD version of the dataset of energy labels.
      http://onehackoranother.com/projects/jquery/tipsy/
 @see Used Ultimate CSS Gradient Generator for background gradient
      http://www.colorzilla.com/gradient-editor/
-@version 2013/10-2013/12
+@version 2013/10-2013/12, 2014/03
 */
 
 :- use_module(generics(list_ext)).
@@ -27,8 +27,8 @@ the LOD version of the dataset of energy labels.
 :- use_module(library(pairs)).
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).
-:- use_module(rdf(rdf_literal)).
 :- use_module(rdf(rdf_serial)).
+:- use_module(rdf_term(rdf_typed_literal)).
 :- use_module(server(app_ui)).
 :- use_module(server(web_modules)).
 :- use_module(sparql(sparql_db)).
@@ -164,15 +164,15 @@ data_item_label(
   [Postcode1,HouseNumber1,HouseNumberAddition1,PrestationIndex1],
   Label
 ):-
-  rdf_simple_literal_value(Postcode1, Postcode2),
-  rdf_typed_literal(HouseNumber1, _, HouseNumber2),
-  rdf_typed_literal(PrestationIndex1, _, PrestationIndex2),
+  rdf_simple_literal_lexical_form(Postcode1, Postcode2),
+  rdf_typed_literal_lexical_form(HouseNumber1, HouseNumber2),
+  rdf_typed_literal_lexical_form(PrestationIndex1, PrestationIndex2),
   (
     HouseNumberAddition1 == '$null$'
   ->
     format(atom(Label), '~w-~w ~w', [Postcode2,HouseNumber2,PrestationIndex2])
   ;
-    rdf_simple_literal_value(HouseNumberAddition1, HouseNumberAddition2),
+    rdf_simple_literal_lexical_form(HouseNumberAddition1, HouseNumberAddition2),
     format(
       atom(Label),
       '~w-~w~w ~w',
