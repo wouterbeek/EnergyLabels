@@ -170,7 +170,7 @@ el_clean_(ToDir, FromFile):-
   rdf_setup_call_cleanup(
     [],
     FromFile,
-    rdf_strip_literal([answer('A')], ['-'], _S, P),
+    rdf_update_literal(_, P, _, _, _, _, strip_lexical_form('-')),
     [format(turtle)],
     ToFile
   ),
