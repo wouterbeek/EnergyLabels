@@ -14,6 +14,7 @@ the LOD version of the dataset of energy labels.
 */
 
 :- use_module(generics(list_ext)).
+:- use_module(generics(row_ext)).
 :- use_module(html(html_form)).
 :- use_module(html(html_table)).
 :- use_module(library(apply)).
@@ -32,11 +33,16 @@ the LOD version of the dataset of energy labels.
 :- use_module(server(app_ui)).
 :- use_module(server(web_modules)).
 :- use_module(sparql(sparql_db)).
-:- use_module(sparql('SPARQL_ext')).
+:- use_module(sparql(sparql_ext)).
 :- use_module(xml(xml_namespace)).
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
-:- 'SPARQL_register_remote'(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
+
+:- http_handler(root(el_app), el_app, []).
+
+:- web_module_add('EnergyLabels', el_app).
+
+:- sparql_register_remote(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
 
 % /css
 :- db_add_novel(user:file_search_path(css, el(css))).
@@ -48,13 +54,9 @@ the LOD version of the dataset of energy labels.
 :- html_resource(js('jsquery.min.js'), []).
 :- html_resource(js('jquery.tipsy.js'), [requires(js('jsquery.min.js'))]).
 
-:- http_handler(root(el), el, []).
-
-:- initialization(web_module_add('EnergyLabels', el_app)).
 
 
-
-el(Request):-
+el_app(Request):-
   http_parameters(
     Request,
     [
@@ -170,7 +172,7 @@ data_item_label(
   ->
     format(atom(Label), '~w-~w ~w', [Postcode2,HouseNumber2,PrestationIndex2])
   ;
-    rdf_simple_literal_lexical_form(HouseNumberAddition1, HouseNumberAddition2),
+    rdf_literal(HouseNumberAddition1, HouseNumberAddition2, _, _),
     format(
       atom(Label),
       '~w-~w~w ~w',
@@ -183,7 +185,7 @@ el_head -->
 
 el_index(Postcode, HouseNumber, HouseNumberAddition, Building):-
   phrase(
-    'SPARQL_formulate'(
+    sparql_formulate(
       _,
       'http://example.com/el',
       [el],
@@ -206,11 +208,12 @@ el_index(Postcode, HouseNumber, HouseNumberAddition, Building):-
     ),
     Query
   ),
-  'SPARQL_query'(el, Query, _VarNames, [row(Building)|_]).
+  sparql_query(el, Query, _VarNames, [row(Building)|_]).
 
 el_indexes(PostcodePrefix, Ls2):-
+  format(atom(Where3), 'filter regex(?postcode, "^~w") .', [PostcodePrefix]),
   phrase(
-    'SPARQL_formulate'(
+    sparql_formulate(
       _,
       'http://example.com/el',
       [el],
@@ -218,10 +221,10 @@ el_indexes(PostcodePrefix, Ls2):-
       true,
       [building,postcode,house_number,house_number_addition,index],
       [
-        rdf(var(building), a el:Building .',
-        rdf(var(building), el:postcode ?postcode .',
-        format(atom(Where3), 'filter regex(?postcode, "^~w") .', [PostcodePrefix]),
-        rdf(var(building), el:huisnummer ?house_number .',
+        rdf(var(building), a, el:'Building'),
+        rdf(var(building), el:postcode, var(postcode)),
+        Where3,
+        rdf(var(building), el:huisnummer, var(house_number)),
         optional([
           rdf(var(building), el:huisnummer_toevoeging, var(house_number_addition))
         ]),
@@ -234,7 +237,7 @@ el_indexes(PostcodePrefix, Ls2):-
     ),
     Query
   ),
-  'SPARQL_query'(el, Query, _VarNames, Rows),
+  sparql_query(el, Query, _VarNames, Rows),
   rows_to_lists(Rows, Ls1),
   maplist(to_pairs, Ls1, Ls2).
 
