@@ -1,7 +1,10 @@
 % The load file for the EnergyLabels project.
 
-:- multifile(user:project_name/1).
-user:project_name('EnergyLabels').
+:- multifile(user:project/2).
+user:project(
+  'EnergyLabels',
+  'XML to Linked Data conversion of energy labels data.'
+).
 
 :- initialization(load_el).
 
