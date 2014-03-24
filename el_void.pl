@@ -18,6 +18,7 @@ Asserts the VoID description of the energy labels dataset.
 :- use_module(library(semweb/rdf_db)).
 :- use_module(os(datetime_ext)).
 :- use_module(rdf(rdf_build)).
+:- use_module(rdf_term(rdf_datatype)).
 :- use_module(rdf_term(rdf_language_tagged_string)).
 :- use_module(rdf_term(rdf_string)).
 :- use_module(rdfs(rdfs_label_ext)).
@@ -199,7 +200,7 @@ assert_foaf_agentschapnl(G, ANL):-
   % rdf:type
   rdf_assert_individual(ANL, foaf:'Organization', G),
   % rdfs:label
-  rdfs_assert_language_tagged_string(ANL, 'Agentschap NL', nl, G).
+  rdfs_assert_label(ANL, 'Agentschap NL', nl, G).
 
 assert_foaf_wouterbeek(G, WB):-
   rdf_global_id(el:'WouterBeek', WB),
@@ -212,5 +213,5 @@ assert_foaf_wouterbeek(G, WB):-
   % rdf:type
   rdf_assert_individual(WB, foaf:'Person', G),
   % rdfs:label
-  rdfs_assert_language_tagged_string(WB, 'Wouter Beek', nl, G).
+  rdfs_assert_label(WB, 'Wouter Beek', nl, G).
 

@@ -9,7 +9,7 @@ run_el:-
   source_file(run_el, ThisFile),
   file_directory_name(ThisFile, ThisDir),
   assert(user:file_search_path(project, ThisDir)),
-
+  
   % PGC
   load_pgc(project),
 

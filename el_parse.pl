@@ -15,7 +15,6 @@ Process all energylabels in a single parse.
 */
 
 :- use_module(ap(ap_stat)).
-:- use_module(dcg(dcg_date)).
 :- use_module(dcg(dcg_generic)).
 :- use_module(library(semweb/rdf_db)).
 :- use_module(library(settings)).

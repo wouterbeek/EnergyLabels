@@ -45,6 +45,7 @@ The result is intended to be used within the Huiskluis project.
 
 :- use_module(ap(ap)).
 :- use_module(ap(ap_stat)).
+:- use_module(dcg(dcg_replace)).
 :- use_module(el(el_parse)). % Used in ap_stage/2.
 :- use_module(el(el_void)).
 :- use_module(generics(codes_ext)).
@@ -53,6 +54,7 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(library(apply)).
 :- use_module(library(debug)).
 :- use_module(library(filesex)).
+:- use_module(library(http/http_open)).
 :- use_module(library(lists)).
 :- use_module(library(readutil)).
 :- use_module(library(semweb/rdf_db)).
@@ -60,7 +62,9 @@ The result is intended to be used within the Huiskluis project.
 :- use_module(os(dir_ext)).
 :- use_module(os(file_ext)).
 :- use_module(os(io_ext)).
+:- use_module(rdf(rdf_meta)).
 :- use_module(rdf(rdf_serial)).
+:- use_module(rdf_term(rdf_literal_build)).
 :- use_module(xml(xml_namespace)).
 
 :- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
@@ -70,25 +74,25 @@ The result is intended to be used within the Huiskluis project.
 
 
 el_script:-
-  ap(
-    [reset(true),to('VoID',turtle)],
-    el,
-    [
-      ap_stage([from(input,'v20130401.dx',archive)], extract_archive),
-      ap_stage([from(_,'v20130401.dx',_)], to_small_files),
-      ap_stage([], insert_newlines),
-      ap_stage([to(_,big,xml)], merge_into_one_file),
-      ap_stage([from(_,big,xml),stat_lag(100)], el_parse),
-      ap_stage([], el_clean),
-      ap_stage([to(output,'VoID',turtle)], assert_el_void)
+  http_open(
+    'ftp://ftp.el-online.nl',
+    Stream,
+    [authorization(basic('Apps4Holla','Apps4Holla_EPBD'))]
+  ),
+  stream_to_atom(Stream, Atom),
+  writeln(Atom).
+/*
+      el_script:ap_stage([], extract_archive),
+      el_script:ap_stage([], to_small_files),
+      el_script:ap_stage([], insert_newlines),
+      el_script:ap_stage([to(big,xml)], merge_into_one_file),
+      el_script:ap_stage([stat_lag(100)], el_parse),
+      el_script:ap_stage([], el_clean),
+      el_script:ap_stage([to(output,'VoID',turtle)], assert_el_void)
     ],
     _
   ).
-
-assert_el_void(FromDir, ToFile):-
-  Graph = 'VoID',
-  assert_el_void(Graph, FromDir),
-  rdf_save([format(turtle)], Graph, ToFile).
+*/
 
 % Split into smaller files.
 to_small_files(FromFile, ToDir):-
@@ -166,13 +170,7 @@ el_clean_(ToDir, FromFile):-
   rdf_equal(el:huisnummer_toevoeging, P),
   
   % Load and unload RDF.
-  rdf_setup_call_cleanup(
-    [],
-    FromFile,
-    rdf_update_literal(_, P, _, _, _, _, strip_lexical_form('-')),
-    [format(turtle)],
-    ToFile
-  ),
+  rdf_update_literal(_, P, _, _, _, _, strip_lexical_form('-')),
   
   % STATS
   ap_stage_tick.

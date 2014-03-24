@@ -13,6 +13,7 @@ the LOD version of the dataset of energy labels.
 @version 2013/10-2013/12, 2014/03
 */
 
+:- use_module(generics(db_ext)).
 :- use_module(generics(list_ext)).
 :- use_module(generics(row_ext)).
 :- use_module(html(html_form)).
@@ -32,11 +33,13 @@ the LOD version of the dataset of energy labels.
 :- use_module(rdf_term(rdf_literal)).
 :- use_module(server(app_ui)).
 :- use_module(server(web_modules)).
+:- use_module(sparql(sparql_build)).
 :- use_module(sparql(sparql_db)).
 :- use_module(sparql(sparql_ext)).
 :- use_module(xml(xml_namespace)).
 
-:- xml_register_namespace(el, 'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
+:- xml_register_namespace(el,
+    'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
 
 :- http_handler(root(el_app), el_app, []).
 
