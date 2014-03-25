@@ -1,6 +1,7 @@
 :- module(
   el_parse,
   [
+    el_parse/1, % +FromFile:atom
     el_parse/2 % +FromFile:atom
                % +ToDirectory:atom
   ]
@@ -34,6 +35,10 @@ Process all energylabels in a single parse.
 :- setting(energylabels_graph, atom, el, 'The name of the energylabels graph.').
 
 
+
+el_parse(File):-
+  file_directory_name(File, Dir),
+  el_parse(File, Dir).
 
 %! el_parse(+FromFile:atom, +ToDirectory:atom) is det.
 % Since the number of entries in the energylabels dataset is too big to

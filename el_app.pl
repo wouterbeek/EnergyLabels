@@ -13,6 +13,7 @@ the LOD version of the dataset of energy labels.
 @version 2013/10-2013/12, 2014/03
 */
 
+:- use_module(el(el_script)).
 :- use_module(generics(db_ext)).
 :- use_module(generics(list_ext)).
 :- use_module(generics(row_ext)).
@@ -259,5 +260,6 @@ load_el_data:-
   rdf_load([format(turtle)], el, File).
 % Has to be created.
 load_el_data:-
-  use_module(el(el_script)).
+  el_script,
+  load_el_data.
 
