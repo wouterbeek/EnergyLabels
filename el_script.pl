@@ -20,7 +20,6 @@ The result was initially intended to be used within the Huiskluis project.
 :- use_module(library(debug)).
 :- use_module(library(lists)).
 :- use_module(library(semweb/rdf_db)).
-:- use_module(library(swi_ide)).
 :- use_module(library(thread)).
 :- use_module(os(archive_ext)).
 :- use_module(os(dir_ext)).
