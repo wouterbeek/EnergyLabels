@@ -49,12 +49,12 @@ the LOD version of the dataset of energy labels.
 :- sparql_register_remote(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
 
 % /css
-:- db_add_novel(user:file_search_path(css, el(css))).
+user:file_search_path(css, el(css)).
 :- html_resource(css('el.css'), []).
 :- html_resource(css('tipsy.css'), []).
 
 % /js
-:- db_add_novel(user:file_search_path(js, el(js))).
+user:file_search_path(js, el(js)).
 :- html_resource(js('jsquery.min.js'), []).
 :- html_resource(js('jquery.tipsy.js'), [requires(js('jsquery.min.js'))]).
 
