@@ -32,6 +32,9 @@ The result was initially intended to be used within the Huiskluis project.
 :- xml_register_namespace(el,
     'https://data.overheid.nl/data/dataset/energielabels-agentschap-nl/').
 
+% Global stack set to 9 Gb.
+:- set_prolog_stack(global, limit(4*10**9)).
+
 
 
 el_script:-
