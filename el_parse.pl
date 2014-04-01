@@ -23,7 +23,7 @@ Process all energylabels in a single parse.
 :- use_module(os(datetime_ext)).
 :- use_module(os(file_ext)).
 :- use_module(rdf(rdf_build)).
-:- use_module(rdf(rdf_serial)).
+:- use_module(rdf_file(rdf_serial)).
 :- use_module(xml(xml_namespace)).
 :- use_module(xml(xml_stream)).
 :- use_module(xml(xml_to_rdf)).
