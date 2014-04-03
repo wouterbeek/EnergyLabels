@@ -44,7 +44,7 @@ the LOD version of the dataset of energy labels.
 
 :- http_handler(root(el_app), el_app, []).
 
-:- web_module_add('EnergyLabels', el_app).
+user:web_module('EnergyLabels', el_app).
 
 :- sparql_register_remote(el, 'lod.cedar-project.nl', 8080, '/sparql/pilod').
 
