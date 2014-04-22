@@ -257,7 +257,7 @@ load_el_data:-
     File,
     [access(read),file_errors(fail),file_type(turtle)]
   ), !,
-  rdf_load([format(turtle)], el, File).
+  rdf_load_any([format(turtle),graph(el)], File).
 % Has to be created.
 load_el_data:-
   el_script,

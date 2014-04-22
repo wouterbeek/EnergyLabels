@@ -68,7 +68,7 @@ el_parse(FromFile, ToDir):-
         ),
         rdf_save([format(turtle)], el, ToFile)
       ),
-      rdf_unload_graph(el)
+      rdf_unload_graph_debug(el)
     )
   ).
 
